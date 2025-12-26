@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bloodlinker-b8d91",
+          "appId": "1:387404596114:android:db6f12eb3120a00a7ef74b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bloodlinker-b8d91",
+          "configurations": {
+            "android": "1:387404596114:android:db6f12eb3120a00a7ef74b",
+            "ios": "1:387404596114:ios:1c41b7ddfb6a417a7ef74b",
+            "macos": "1:387404596114:ios:1c41b7ddfb6a417a7ef74b",
+            "web": "1:387404596114:web:5932324eca02b04c7ef74b",
+            "windows": "1:387404596114:web:a2904140bcc9dcba7ef74b"
+          }
+        }
+      }
+    }
+  }
+}

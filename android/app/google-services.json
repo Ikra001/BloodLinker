@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "387404596114",
+    "project_id": "bloodlinker-b8d91",
+    "storage_bucket": "bloodlinker-b8d91.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:387404596114:android:db6f12eb3120a00a7ef74b",
+        "android_client_info": {
+          "package_name": "com.example.blood_linker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLyW9BBR_6MdVWapw9y0fJpTEk_eCLjQM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
