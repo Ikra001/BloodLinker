@@ -13,9 +13,14 @@ class HomePage extends StatelessWidget {
 
   Future<void> onPressedLogout(BuildContext context) async {
     final authManager = Provider.of<AuthManager>(context, listen: false);
+
     await authManager.logout();
+
     if (context.mounted) {
-      Navigator.pushReplacementNamed(context, WelcomePage.route);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const WelcomePage()),
+        (route) => false,
+      );
     }
   }
 
