@@ -1,7 +1,9 @@
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for database access
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:blood_linker/pages/request_blood_page.dart';
 
 class HomePage extends StatelessWidget {
   static const route = '/home';
@@ -19,169 +21,277 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFB71C1C), Color(0xFFE57373)],
+      backgroundColor: const Color(0xFFF5F5F5), // Light grey background
+      appBar: AppBar(
+        title: const Text('BloodLinker Dashboard'),
+        backgroundColor: const Color(0xFFB71C1C),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () => onPressedLogout(context),
+            icon: const Icon(Icons.logout),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Consumer<AuthManager>(
-                builder: (context, authManager, child) {
-                  return Card(
-                    elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.bloodtype,
-                            size: 60,
-                            color: Color(0xFFB71C1C),
-                          ),
-                          const SizedBox(height: 15),
-                          const Text(
-                            'Dashboard',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFB71C1C),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          if (authManager.customUser != null) ...[
-                            Text(
-                              'Welcome, ${authManager.customUser!.name}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFB71C1C),
-                              ),
-                            ),
-                            const SizedBox(height: 15),
-                            _buildInfoRow(
-                              'Email',
-                              authManager.customUser!.email,
-                            ),
-                            _buildInfoRow(
-                              'Phone',
-                              authManager.customUser!.phone,
-                            ),
-                            _buildInfoRow(
-                              'Blood Type',
-                              authManager.customUser!.bloodType.name
-                                  .replaceAllMapped(
-                                    RegExp(r'([A-Z])'),
-                                    (match) => ' ${match.group(1)}',
-                                  )
-                                  .trim()
-                                  .split(' ')
-                                  .map(
-                                    (word) =>
-                                        word[0].toUpperCase() +
-                                        word.substring(1),
-                                  )
-                                  .join(' '),
-                            ),
-                            // Removed: User Type row
-                            // Removed: Donor/Recipient specific details (Last Donation, Need Date, etc.)
-                          ] else if (authManager.user != null) ...[
-                            Text(
-                              'Welcome, ${authManager.user!.email ?? 'User'}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Loading user data...',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 30),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton.icon(
-                              onPressed: authManager.isLoading
-                                  ? null
-                                  : () => onPressedLogout(context),
-                              icon: authManager.isLoading
-                                  ? const SizedBox.shrink()
-                                  : const Icon(
-                                      Icons.logout,
-                                      color: Colors.white,
-                                    ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFB71C1C),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              label: authManager.isLoading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Logout',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // 1. TOP SECTION: User Info & Actions
+          _buildTopSection(context),
+
+          // 2. HEADER: "Recent Requests"
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            child: Row(
+              children: [
+                const Text(
+                  "Recent Requests",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  "Live Feed",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
             ),
           ),
-        ),
+
+          // 3. BOTTOM SECTION: The Feed (StreamBuilder)
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              // Listen to the 'requests' collection, ordered by newest first
+              stream: FirebaseFirestore.instance
+                  .collection('requests')
+                  .orderBy('requestDate', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                // Handling Loading State
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // Handling Error State
+                if (snapshot.hasError) {
+                  return Center(child: Text("Error: ${snapshot.error}"));
+                }
+
+                // Handling Empty State
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text("No blood requests found nearby."),
+                  );
+                }
+
+                // Displaying the List
+                final requests = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: requests.length,
+                  itemBuilder: (context, index) {
+                    final data = requests[index].data() as Map<String, dynamic>;
+                    return _buildRequestCard(data);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // --- WIDGETS ---
+
+  // The Profile and "Request Blood" Button Section
+  Widget _buildTopSection(BuildContext context) {
+    final authManager = Provider.of<AuthManager>(context);
+    final user = authManager.customUser;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
+      decoration: const BoxDecoration(
+        color: Color(0xFFB71C1C),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
         children: [
-          Text(
-            '$label:',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.white,
+                child: Text(
+                  user?.bloodType.name.substring(0, 2).toUpperCase() ?? "O+",
+                  style: const TextStyle(
+                    color: Color(0xFFB71C1C),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 15),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Hello, ${user?.name ?? 'User'}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    "Donate Life, Save Lives.",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RequestBloodPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_alert, color: Color(0xFFB71C1C)),
+              label: const Text(
+                'Request Blood',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFB71C1C),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
         ],
+      ),
+    );
+  }
+
+  // The Individual Request Card in the list
+  Widget _buildRequestCard(Map<String, dynamic> data) {
+    // Handling Timestamp safely
+    // Note: Firestore returns a Timestamp, we need to convert it to DateTime logic if needed
+    // For now we just show the static data
+
+    return Card(
+      elevation: 4,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    data['bloodGroup'] ?? 'Unknown',
+                    style: const TextStyle(
+                      color: Color(0xFFB71C1C),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    data['hospitalLocation'] ?? 'Unknown Location',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFE0E0E0),
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.person, size: 16, color: Colors.grey),
+                const SizedBox(width: 5),
+                Text("Patient: ${data['patientName'] ?? 'N/A'}"),
+                const Spacer(),
+                const Icon(Icons.local_hospital, size: 16, color: Colors.grey),
+                const SizedBox(width: 5),
+                Text("${data['bagsNeeded']} Bags"),
+              ],
+            ),
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Future: Add Call Functionality here
+                  // Helper function to launch phone dialer
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB71C1C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  "Donate Now",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

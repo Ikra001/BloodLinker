@@ -198,4 +198,41 @@ class AuthManager extends ChangeNotifier {
         return 'An error occurred: $code';
     }
   }
+
+  // Create a new Blood Request
+  Future<bool> createBloodRequest({
+    required String patientName,
+    required String bloodGroup,
+    required int bagsNeeded,
+    required String contactNumber,
+    required String hospitalLocation,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      if (_user == null) throw Exception("User not logged in");
+
+      await _firestore.collection('requests').add({
+        'requesterId': _user!.uid,
+        'patientName': patientName,
+        'bloodGroup': bloodGroup,
+        'bagsNeeded': bagsNeeded,
+        'contactNumber': contactNumber,
+        'hospitalLocation': hospitalLocation,
+        'requestDate': FieldValue.serverTimestamp(),
+        'status':
+            'pending', // You can use this later to mark requests as fulfilled
+      });
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Failed to create request: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
 }
