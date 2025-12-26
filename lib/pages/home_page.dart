@@ -20,68 +20,184 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Consumer<AuthManager>(
-              builder: (context, authManager, child) {
-                if (authManager.customUser != null) {
-                  final customUser = authManager.customUser!;
-                  return Column(
-                    children: [
-                      Text('Welcome, ${customUser.name}'),
-                      Text('Email: ${customUser.email}'),
-                      Text('Phone: ${customUser.phone}'),
-                      Text(
-                        'Blood Type: ${customUser.bloodType.name.replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}').trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ')}',
-                      ),
-                      Text('Type: ${customUser.userType.toUpperCase()}'),
-                      if (customUser is Donor)
-                        Text(
-                          'Last Donation: ${customUser.lastDonationDate.toString().split(' ')[0]}',
-                        ),
-                      if (customUser is Recipient) ...[
-                        Text(
-                          'Need Date: ${customUser.needDate.toString().split(' ')[0]}',
-                        ),
-                        Text('Bags Needed: ${customUser.bagsNeeded}'),
-                      ],
-                      const SizedBox(height: 20),
-                    ],
-                  );
-                } else if (authManager.user != null) {
-                  return Column(
-                    children: [
-                      Text('Welcome, ${authManager.user!.email ?? 'User'}'),
-                      const Text('Loading user data...'),
-                      const SizedBox(height: 20),
-                    ],
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-            const Text('Home'),
-            Consumer<AuthManager>(
-              builder: (context, authManager, child) {
-                return ElevatedButton(
-                  onPressed: authManager.isLoading
-                      ? null
-                      : () => onPressedLogout(context),
-                  child: authManager.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Logout'),
-                );
-              },
-            ),
-          ],
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFB71C1C), Color(0xFFE57373)],
+          ),
         ),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Consumer<AuthManager>(
+                builder: (context, authManager, child) {
+                  return Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.bloodtype,
+                            size: 60,
+                            color: Color(0xFFB71C1C),
+                          ),
+                          const SizedBox(height: 15),
+                          const Text(
+                            'Dashboard',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFB71C1C),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (authManager.customUser != null) ...[
+                            Text(
+                              'Welcome, ${authManager.customUser!.name}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFB71C1C),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            _buildInfoRow('Email', authManager.customUser!.email),
+                            _buildInfoRow('Phone', authManager.customUser!.phone),
+                            _buildInfoRow(
+                              'Blood Type',
+                              authManager.customUser!.bloodType.name
+                                  .replaceAllMapped(
+                                    RegExp(r'([A-Z])'),
+                                    (match) => ' ${match.group(1)}',
+                                  )
+                                  .trim()
+                                  .split(' ')
+                                  .map((word) =>
+                                      word[0].toUpperCase() +
+                                      word.substring(1))
+                                  .join(' '),
+                            ),
+                            _buildInfoRow(
+                              'Type',
+                              authManager.customUser!.userType.toUpperCase(),
+                            ),
+                            if (authManager.customUser is Donor) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoRow(
+                                'Last Donation',
+                                (authManager.customUser as Donor)
+                                    .lastDonationDate
+                                    .toString()
+                                    .split(' ')[0],
+                              ),
+                            ],
+                            if (authManager.customUser is Recipient) ...[
+                              const SizedBox(height: 10),
+                              _buildInfoRow(
+                                'Need Date',
+                                (authManager.customUser as Recipient)
+                                    .needDate
+                                    .toString()
+                                    .split(' ')[0],
+                              ),
+                              _buildInfoRow(
+                                'Bags Needed',
+                                '${(authManager.customUser as Recipient).bagsNeeded}',
+                              ),
+                            ],
+                          ] else if (authManager.user != null) ...[
+                            Text(
+                              'Welcome, ${authManager.user!.email ?? 'User'}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Loading user data...',
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ],
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              onPressed: authManager.isLoading
+                                  ? null
+                                  : () => onPressedLogout(context),
+                              icon: authManager.isLoading
+                                  ? const SizedBox.shrink()
+                                  : const Icon(Icons.logout),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFB71C1C),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              label: authManager.isLoading
+                                  ? const SizedBox(
+                                      height: 22,
+                                      width: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Logout',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '$label:',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

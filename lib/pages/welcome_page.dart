@@ -10,22 +10,69 @@ class WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('BloodLinker')),
-      body: Center(
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFB71C1C), // dark red
+              Color(0xFFE57373), // light red
+            ],
+          ),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, LoginPage.route);
-              },
-              child: const Text('Login'),
+            const Text(
+              'BloodLinker',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.5,
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, RegisterPage.route);
-              },
-              child: const Text('Register'),
+            const SizedBox(height: 40),
+
+            SizedBox(
+              width: 220,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, LoginPage.route);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.red.shade700,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text('Login', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: 220,
+              height: 50,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, RegisterPage.route);
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white, width: 2),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text('Register', style: TextStyle(fontSize: 18)),
+              ),
             ),
           ],
         ),
