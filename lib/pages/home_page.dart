@@ -138,7 +138,8 @@ class HomePage extends StatelessWidget {
                 radius: 30,
                 backgroundColor: Colors.white,
                 child: Text(
-                  user?.bloodType.name.substring(0, 2).toUpperCase() ?? "O+",
+                  // Use the helper function here
+                  _getDisplayBloodGroup(user?.bloodType.name),
                   style: const TextStyle(
                     color: Color(0xFFB71C1C),
                     fontWeight: FontWeight.bold,
@@ -262,6 +263,19 @@ class HomePage extends StatelessWidget {
                 Text("${data['bagsNeeded']} Bags"),
               ],
             ),
+
+            // --- TIME ROW (ADDED HERE) ---
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  "Posted: ${_formatTimestamp(data['requestDate'])}",
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
             const SizedBox(height: 15),
 
             // --- BOTTOM ROW: The Call Button (FIXED) ---
@@ -316,5 +330,21 @@ class HomePage extends StatelessWidget {
       return 'Just now';
     }
     return 'Recently';
+  }
+
+  // Helper to convert "bPositive" -> "B+"
+  String _getDisplayBloodGroup(String? bloodTypeEnumName) {
+    if (bloodTypeEnumName == null) return "N/A";
+
+    String clean = bloodTypeEnumName.toLowerCase();
+    String sign = clean.contains('positive') ? '+' : '-';
+
+    // Remove 'positive'/'negative' to get just A, B, AB, O
+    String type = clean
+        .replaceAll('positive', '')
+        .replaceAll('negative', '')
+        .toUpperCase();
+
+    return '$type$sign';
   }
 }
