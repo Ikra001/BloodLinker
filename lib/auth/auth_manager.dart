@@ -1,22 +1,33 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:blood_linker/models/user.dart';
+import 'package:blood_linker/models/blood_type.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthManager extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   User? _user;
+  CustomUser? _customUser;
   bool _isLoading = false;
   String? _errorMessage;
 
   AuthManager() {
     // Listen to auth state changes
-    _auth.authStateChanges().listen((User? user) {
+    _auth.authStateChanges().listen((User? user) async {
       _user = user;
+      if (user != null) {
+        await _loadUserData(user.uid);
+      } else {
+        _customUser = null;
+      }
       notifyListeners();
     });
   }
 
   // Getters
   User? get user => _user;
+  CustomUser? get customUser => _customUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
@@ -34,7 +45,15 @@ class AuthManager extends ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Load user data from Firestore
+      if (userCredential.user != null) {
+        await _loadUserData(userCredential.user!.uid);
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -52,21 +71,68 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  // Register with email and password
+  // Register with email and password and user data
   Future<bool> registerWithEmailAndPassword(
     String email,
-    String password,
-  ) async {
+    String password, {
+    String? name,
+    String? phone,
+    String? bloodType,
+    String? userType,
+    DateTime? lastDonationDate,
+    DateTime? needDate,
+    int? bagsNeeded,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      await _auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // Create CustomUser object
+      CustomUser customUser;
+      if (userType == 'donor' && lastDonationDate != null) {
+        customUser = Donor(
+          userId: userCredential.user!.uid,
+          name: name ?? '',
+          email: email,
+          phone: phone ?? '',
+          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
+          lastDonationDate: lastDonationDate,
+        );
+      } else if (userType == 'recipient' && needDate != null && bagsNeeded != null) {
+        customUser = Recipient(
+          userId: userCredential.user!.uid,
+          name: name ?? '',
+          email: email,
+          phone: phone ?? '',
+          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
+          needDate: needDate,
+          bagsNeeded: bagsNeeded,
+        );
+      } else {
+        // Default to basic CustomUser
+        customUser = CustomUser(
+          userId: userCredential.user!.uid,
+          name: name ?? '',
+          email: email,
+          phone: phone ?? '',
+          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
+          userType: userType ?? 'donor',
+        );
+      }
+
+      // Save to Firestore
+      await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set(customUser.toFirestore());
+
+      _customUser = customUser;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -81,6 +147,35 @@ class AuthManager extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  // Load user data from Firestore
+  Future<void> _loadUserData(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final userType = data['userType'] ?? 'donor';
+
+        if (userType == 'donor') {
+          _customUser = CustomUser.donorFromFirestore(doc);
+        } else if (userType == 'recipient') {
+          _customUser = CustomUser.recipientFromFirestore(doc);
+        } else {
+          _customUser = CustomUser.fromFirestore(doc);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+    }
+  }
+
+  // Parse blood type string to enum
+  BloodType _parseBloodType(String bloodType) {
+    return BloodType.values.firstWhere(
+      (bt) => bt.name == bloodType.toLowerCase(),
+      orElse: () => BloodType.oPositive,
+    );
   }
 
   // Logout

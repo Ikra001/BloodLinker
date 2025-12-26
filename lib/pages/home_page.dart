@@ -1,5 +1,6 @@
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,10 +27,35 @@ class HomePage extends StatelessWidget {
           children: [
             Consumer<AuthManager>(
               builder: (context, authManager, child) {
-                if (authManager.user != null) {
+                if (authManager.customUser != null) {
+                  final customUser = authManager.customUser!;
+                  return Column(
+                    children: [
+                      Text('Welcome, ${customUser.name}'),
+                      Text('Email: ${customUser.email}'),
+                      Text('Phone: ${customUser.phone}'),
+                      Text(
+                        'Blood Type: ${customUser.bloodType.name.replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}').trim().split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ')}',
+                      ),
+                      Text('Type: ${customUser.userType.toUpperCase()}'),
+                      if (customUser is Donor)
+                        Text(
+                          'Last Donation: ${customUser.lastDonationDate.toString().split(' ')[0]}',
+                        ),
+                      if (customUser is Recipient) ...[
+                        Text(
+                          'Need Date: ${customUser.needDate.toString().split(' ')[0]}',
+                        ),
+                        Text('Bags Needed: ${customUser.bagsNeeded}'),
+                      ],
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                } else if (authManager.user != null) {
                   return Column(
                     children: [
                       Text('Welcome, ${authManager.user!.email ?? 'User'}'),
+                      const Text('Loading user data...'),
                       const SizedBox(height: 20),
                     ],
                   );
