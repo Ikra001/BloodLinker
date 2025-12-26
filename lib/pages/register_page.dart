@@ -21,10 +21,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
   String? _selectedBloodType;
-  String? _selectedUserType;
-  DateTime? _lastDonationDate;
-  DateTime? _needDate;
-  int? _bagsNeeded;
+
+  // Removed: _selectedUserType, _lastDonationDate, _needDate, _bagsNeeded
 
   @override
   void dispose() {
@@ -38,16 +36,15 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> onPressedRegister(BuildContext context) async {
     if (_formKey.currentState?.validate() ?? false) {
       final authManager = Provider.of<AuthManager>(context, listen: false);
+
+      // NOTE: You must also update your AuthManager to remove these parameters
       final success = await authManager.registerWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
         bloodType: _selectedBloodType,
-        userType: _selectedUserType,
-        lastDonationDate: _lastDonationDate,
-        needDate: _needDate,
-        bagsNeeded: _bagsNeeded,
+        // Removed userType, lastDonationDate, needDate, bagsNeeded
       );
 
       if (success && mounted) {
@@ -60,23 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, bool isDonationDate) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isDonationDate) {
-          _lastDonationDate = picked;
-        } else {
-          _needDate = picked;
-        }
-      });
-    }
-  }
+  // Removed _selectDate function
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Blood Type
+                      // Blood Type (Kept this as it is essential)
                       DropdownButtonFormField<String>(
                         value: _selectedBloodType,
                         decoration: InputDecoration(
@@ -247,149 +228,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 20),
 
-                      // User Type
-                      DropdownButtonFormField<String>(
-                        value: _selectedUserType,
-                        decoration: InputDecoration(
-                          labelText: 'User Type',
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'donor', child: Text('Donor')),
-                          DropdownMenuItem(
-                            value: 'recipient',
-                            child: Text('Recipient'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedUserType = value;
-                            // Clear conditional fields when switching
-                            if (value == 'donor') {
-                              _needDate = null;
-                              _bagsNeeded = null;
-                            } else {
-                              _lastDonationDate = null;
-                            }
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'User type is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Conditional fields for Donor
-                      if (_selectedUserType == 'donor')
-                        InkWell(
-                          onTap: () => _selectDate(context, true),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today,
-                                        color: Color(0xFFB71C1C)),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      _lastDonationDate == null
-                                          ? 'Select Last Donation Date'
-                                          : 'Last Donation: ${_lastDonationDate!.toString().split(' ')[0]}',
-                                      style: TextStyle(
-                                        color: _lastDonationDate == null
-                                            ? Colors.grey
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Icon(Icons.arrow_forward_ios,
-                                    size: 16, color: Colors.grey),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // Conditional fields for Recipient
-                      if (_selectedUserType == 'recipient') ...[
-                        InkWell(
-                          onTap: () => _selectDate(context, false),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today,
-                                        color: Color(0xFFB71C1C)),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      _needDate == null
-                                          ? 'Select Need Date'
-                                          : 'Need Date: ${_needDate!.toString().split(' ')[0]}',
-                                      style: TextStyle(
-                                        color: _needDate == null
-                                            ? Colors.grey
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const Icon(Icons.arrow_forward_ios,
-                                    size: 16, color: Colors.grey),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          decoration: InputDecoration(
-                            labelText: 'Bags Needed',
-                            prefixIcon: const Icon(Icons.inventory),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            setState(() {
-                              _bagsNeeded = int.tryParse(value);
-                            });
-                          },
-                          validator: (value) {
-                            if (_selectedUserType == 'recipient') {
-                              if (value == null || value.isEmpty) {
-                                return 'Bags needed is required';
-                              }
-                              final bags = int.tryParse(value);
-                              if (bags == null || bags <= 0) {
-                                return 'Please enter a valid number';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-
+                      // Removed User Type Dropdown and Date Fields here
                       const SizedBox(height: 30),
 
                       // Register Button

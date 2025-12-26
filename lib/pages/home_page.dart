@@ -1,6 +1,5 @@
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:blood_linker/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -70,8 +69,14 @@ class HomePage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 15),
-                            _buildInfoRow('Email', authManager.customUser!.email),
-                            _buildInfoRow('Phone', authManager.customUser!.phone),
+                            _buildInfoRow(
+                              'Email',
+                              authManager.customUser!.email,
+                            ),
+                            _buildInfoRow(
+                              'Phone',
+                              authManager.customUser!.phone,
+                            ),
                             _buildInfoRow(
                               'Blood Type',
                               authManager.customUser!.bloodType.name
@@ -81,39 +86,15 @@ class HomePage extends StatelessWidget {
                                   )
                                   .trim()
                                   .split(' ')
-                                  .map((word) =>
-                                      word[0].toUpperCase() +
-                                      word.substring(1))
+                                  .map(
+                                    (word) =>
+                                        word[0].toUpperCase() +
+                                        word.substring(1),
+                                  )
                                   .join(' '),
                             ),
-                            _buildInfoRow(
-                              'Type',
-                              authManager.customUser!.userType.toUpperCase(),
-                            ),
-                            if (authManager.customUser is Donor) ...[
-                              const SizedBox(height: 10),
-                              _buildInfoRow(
-                                'Last Donation',
-                                (authManager.customUser as Donor)
-                                    .lastDonationDate
-                                    .toString()
-                                    .split(' ')[0],
-                              ),
-                            ],
-                            if (authManager.customUser is Recipient) ...[
-                              const SizedBox(height: 10),
-                              _buildInfoRow(
-                                'Need Date',
-                                (authManager.customUser as Recipient)
-                                    .needDate
-                                    .toString()
-                                    .split(' ')[0],
-                              ),
-                              _buildInfoRow(
-                                'Bags Needed',
-                                '${(authManager.customUser as Recipient).bagsNeeded}',
-                              ),
-                            ],
+                            // Removed: User Type row
+                            // Removed: Donor/Recipient specific details (Last Donation, Need Date, etc.)
                           ] else if (authManager.user != null) ...[
                             Text(
                               'Welcome, ${authManager.user!.email ?? 'User'}',
@@ -125,7 +106,10 @@ class HomePage extends StatelessWidget {
                             const SizedBox(height: 10),
                             const Text(
                               'Loading user data...',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                           const SizedBox(height: 30),
@@ -138,7 +122,10 @@ class HomePage extends StatelessWidget {
                                   : () => onPressedLogout(context),
                               icon: authManager.isLoading
                                   ? const SizedBox.shrink()
-                                  : const Icon(Icons.logout),
+                                  : const Icon(
+                                      Icons.logout,
+                                      color: Colors.white,
+                                    ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFB71C1C),
                                 shape: RoundedRectangleBorder(
@@ -192,10 +179,7 @@ class HomePage extends StatelessWidget {
           ),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),

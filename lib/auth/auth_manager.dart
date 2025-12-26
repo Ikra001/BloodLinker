@@ -71,17 +71,13 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  // Register with email and password and user data
+  // Register with email, password, and basic profile data
   Future<bool> registerWithEmailAndPassword(
     String email,
     String password, {
     String? name,
     String? phone,
     String? bloodType,
-    String? userType,
-    DateTime? lastDonationDate,
-    DateTime? needDate,
-    int? bagsNeeded,
   }) async {
     try {
       _isLoading = true;
@@ -93,38 +89,17 @@ class AuthManager extends ChangeNotifier {
         password: password,
       );
 
-      // Create CustomUser object
-      CustomUser customUser;
-      if (userType == 'donor' && lastDonationDate != null) {
-        customUser = Donor(
-          userId: userCredential.user!.uid,
-          name: name ?? '',
-          email: email,
-          phone: phone ?? '',
-          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
-          lastDonationDate: lastDonationDate,
-        );
-      } else if (userType == 'recipient' && needDate != null && bagsNeeded != null) {
-        customUser = Recipient(
-          userId: userCredential.user!.uid,
-          name: name ?? '',
-          email: email,
-          phone: phone ?? '',
-          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
-          needDate: needDate,
-          bagsNeeded: bagsNeeded,
-        );
-      } else {
-        // Default to basic CustomUser
-        customUser = CustomUser(
-          userId: userCredential.user!.uid,
-          name: name ?? '',
-          email: email,
-          phone: phone ?? '',
-          bloodType: _parseBloodType(bloodType ?? 'oPositive'),
-          userType: userType ?? 'donor',
-        );
-      }
+      // Create a standard CustomUser object
+      // Defaulting userType to 'donor' since selection was removed,
+      // or you can use 'user' if your model supports it.
+      CustomUser customUser = CustomUser(
+        userId: userCredential.user!.uid,
+        name: name ?? '',
+        email: email,
+        phone: phone ?? '',
+        bloodType: _parseBloodType(bloodType ?? 'oPositive'),
+        userType: 'donor', // Defaulting to donor as the standard type
+      );
 
       // Save to Firestore
       await _firestore
@@ -155,12 +130,14 @@ class AuthManager extends ChangeNotifier {
       final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
         final data = doc.data()!;
+        // Since we simplified registration, we likely just use the basic factory
+        // But keeping the check ensures backward compatibility if you had old data
         final userType = data['userType'] ?? 'donor';
 
         if (userType == 'donor') {
-          _customUser = CustomUser.donorFromFirestore(doc);
-        } else if (userType == 'recipient') {
-          _customUser = CustomUser.recipientFromFirestore(doc);
+          // If you still have the specialized factory, use it, otherwise use basic
+          // Assuming CustomUser.fromFirestore handles basic fields correctly
+          _customUser = CustomUser.fromFirestore(doc);
         } else {
           _customUser = CustomUser.fromFirestore(doc);
         }
@@ -173,7 +150,7 @@ class AuthManager extends ChangeNotifier {
   // Parse blood type string to enum
   BloodType _parseBloodType(String bloodType) {
     return BloodType.values.firstWhere(
-      (bt) => bt.name == bloodType.toLowerCase(),
+      (bt) => bt.name.toLowerCase() == bloodType.toLowerCase(),
       orElse: () => BloodType.oPositive,
     );
   }
