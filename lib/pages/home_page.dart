@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for database ac
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatelessWidget {
   static const route = '/home';
@@ -198,12 +199,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // The Individual Request Card in the list
   Widget _buildRequestCard(Map<String, dynamic> data) {
-    // Handling Timestamp safely
-    // Note: Firestore returns a Timestamp, we need to convert it to DateTime logic if needed
-    // For now we just show the static data
-
     return Card(
       elevation: 4,
       margin: const EdgeInsets.only(bottom: 16),
@@ -213,6 +209,7 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- TOP ROW: Blood Group & Location ---
             Row(
               children: [
                 Container(
@@ -244,21 +241,11 @@ class HomePage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFFE0E0E0),
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: Colors.grey,
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
+
+            // --- MIDDLE ROW: Patient Name & Bags ---
             Row(
               children: [
                 const Icon(Icons.person, size: 16, color: Colors.grey),
@@ -271,22 +258,38 @@ class HomePage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
+
+            // --- BOTTOM ROW: The Call Button (FIXED) ---
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Future: Add Call Functionality here
-                  // Helper function to launch phone dialer
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  // 1. Get the number
+                  String phoneNumber = data['contactNumber'] ?? '';
+
+                  // 2. Simple check: Is there a number?
+                  if (phoneNumber.isNotEmpty) {
+                    // 3. Create the command to open the dialer
+                    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+
+                    // 4. FORCE open the dialer (we removed the 'if' check)
+                    try {
+                      await launchUrl(launchUri);
+                    } catch (e) {
+                      print("Error: $e"); // Prints error to console if it fails
+                    }
+                  }
                 },
+                icon: const Icon(Icons.phone, color: Colors.white, size: 18),
+                label: const Text(
+                  "Call to Donate",
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFB71C1C),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-                child: const Text(
-                  "Donate Now",
-                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ),
@@ -294,5 +297,19 @@ class HomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Small helper to show "Just now" or date
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Recently';
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      final difference = DateTime.now().difference(date);
+      if (difference.inDays > 0) return '${difference.inDays} days ago';
+      if (difference.inHours > 0) return '${difference.inHours} hours ago';
+      if (difference.inMinutes > 0) return '${difference.inMinutes} mins ago';
+      return 'Just now';
+    }
+    return 'Recently';
   }
 }
