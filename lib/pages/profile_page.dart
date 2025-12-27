@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_details_page.dart';
+import 'package:blood_linker/utils/logger.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -270,6 +272,26 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 30),
                 const Divider(),
                 const SizedBox(height: 20),
+                // Donation History Section
+                Row(
+                  children: [
+                    Icon(Icons.history, color: Constants.primaryColor),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Donation History',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Constants.primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildDonationHistory(authManager),
+                const SizedBox(height: 30),
+                const Divider(),
+                const SizedBox(height: 20),
                 // My Reserved Request Section
                 Row(
                   children: [
@@ -360,26 +382,16 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                Icon(
-                  Icons.favorite_border,
-                  size: 48,
-                  color: Colors.grey[400],
-                ),
+                Icon(Icons.favorite_border, size: 48, color: Colors.grey[400]),
                 const SizedBox(height: 12),
                 Text(
                   'No interested requests yet',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Show interest in requests to see them here',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
             ),
@@ -387,18 +399,18 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final requests = snapshot.data!.docs.toList();
-        
+
         // Sort by requestDate in descending order (most recent first)
         requests.sort((a, b) {
           final aDate = a.data() as Map<String, dynamic>;
           final bDate = b.data() as Map<String, dynamic>;
           final aTimestamp = aDate['requestDate'];
           final bTimestamp = bDate['requestDate'];
-          
+
           if (aTimestamp == null && bTimestamp == null) return 0;
           if (aTimestamp == null) return 1;
           if (bTimestamp == null) return -1;
-          
+
           // Compare timestamps (descending order)
           if (aTimestamp is Timestamp && bTimestamp is Timestamp) {
             return bTimestamp.compareTo(aTimestamp);
@@ -462,7 +474,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.red[50],
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           border: Border.all(
                                             color: Colors.red,
                                             width: 1,
@@ -501,7 +515,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Constants.primaryColor.withOpacity(0.1),
+                                        color: Constants.primaryColor
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -816,10 +831,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 8),
                 Text(
                   'You haven\'t been reserved for any requests yet',
-                  style: TextStyle(
-                    color: Colors.green[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.green[600], fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -828,18 +840,18 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final requests = snapshot.data!.docs.toList();
-        
+
         // Sort by requestDate in descending order (most recent first)
         requests.sort((a, b) {
           final aDate = a.data() as Map<String, dynamic>;
           final bDate = b.data() as Map<String, dynamic>;
           final aTimestamp = aDate['requestDate'];
           final bTimestamp = bDate['requestDate'];
-          
+
           if (aTimestamp == null && bTimestamp == null) return 0;
           if (aTimestamp == null) return 1;
           if (bTimestamp == null) return -1;
-          
+
           // Compare timestamps (descending order)
           if (aTimestamp is Timestamp && bTimestamp is Timestamp) {
             return bTimestamp.compareTo(aTimestamp);
@@ -909,7 +921,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.green,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: const Text(
                                           'RESERVED',
@@ -929,7 +943,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.red[50],
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                             border: Border.all(
                                               color: Colors.red,
                                               width: 1,
@@ -966,8 +982,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Constants.primaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: Constants.primaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           bloodGroup,
@@ -1064,6 +1083,189 @@ class _ProfilePageState extends State<ProfilePage> {
                       ],
                     ),
                   ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _makeCall(String phoneNumber) async {
+    if (phoneNumber.isEmpty) {
+      return;
+    }
+
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        throw 'Could not launch phone dialer';
+      }
+    } catch (e) {
+      AppLogger.error('Error launching phone dialer', e);
+    }
+  }
+
+  String _formatDonationDate(dynamic timestamp) {
+    if (timestamp == null) return 'Date not available';
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    }
+    return 'Date not available';
+  }
+
+  Widget _buildDonationHistory(AuthManager authManager) {
+    final currentUser = authManager.user;
+
+    if (currentUser == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('Please log in to see your donation history.'),
+        ),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('donationHistory')
+          .orderBy('markAsCompletedDate', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Error: ${snapshot.error}'),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.history, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 12),
+                Text(
+                  'No donation history yet',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your completed donations will appear here',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        final donations = snapshot.data!.docs;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: donations.length,
+          itemBuilder: (context, index) {
+            final doc = donations[index];
+            final data = doc.data() as Map<String, dynamic>;
+
+            final patientName = data['patientName'] as String? ?? 'Unknown';
+            final contactNumber = data['contactNumber'] as String? ?? '';
+            final markAsCompletedDate = data['markAsCompletedDate'];
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Constants.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.favorite,
+                        color: Constants.primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            patientName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDonationDate(markAsCompletedDate),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (contactNumber.isNotEmpty)
+                      IconButton(
+                        icon: Icon(Icons.phone, color: Constants.primaryColor),
+                        onPressed: () => _makeCall(contactNumber),
+                        tooltip: 'Call',
+                      ),
+                  ],
                 ),
               ),
             );

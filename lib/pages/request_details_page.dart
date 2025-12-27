@@ -549,6 +549,99 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     }
   }
 
+  Future<void> _markAsCompleted() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Get current request data to find reserved donor
+      final requestDoc = await FirebaseFirestore.instance
+          .collection('requests')
+          .doc(widget.requestId)
+          .get();
+
+      final requestData = requestDoc.data();
+      final reservedDonors =
+          (requestData?['reservedDonors'] as List<dynamic>?) ?? [];
+
+      if (reservedDonors.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No donor is reserved for this request'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get the reserved donor ID (should be only one)
+      final reservedDonorId = reservedDonors[0] as String;
+
+      // Get patient information from request
+      final patientName =
+          widget.requestData['patientName'] as String? ?? 'Unknown';
+      final contactNumber =
+          widget.requestData['contactNumber'] as String? ?? '';
+
+      // Add donation entry to the donor's donationHistory collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(reservedDonorId)
+          .collection('donationHistory')
+          .add({
+            'patientName': patientName,
+            'contactNumber': contactNumber,
+            'markAsCompletedDate': FieldValue.serverTimestamp(),
+            'requestId': widget.requestId,
+          });
+
+      // Update the donor's lastDonationDate
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(reservedDonorId)
+          .update({'lastDonationDate': FieldValue.serverTimestamp()});
+
+      // Delete the request after marking as completed
+      await FirebaseFirestore.instance
+          .collection('requests')
+          .doc(widget.requestId)
+          .delete();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Request marked as completed and removed!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Navigate back after deletion
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      AppLogger.error('Error marking request as completed', e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _reserveDonor(String donorId) async {
     setState(() {
       _isLoading = true;
@@ -1440,6 +1533,113 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                 ],
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Mark as Completed button (shown if there's a reserved donor)
+                          StreamBuilder<DocumentSnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('requests')
+                                .doc(widget.requestId)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final requestData =
+                                  snapshot.data!.data()
+                                      as Map<String, dynamic>?;
+                              final reservedDonors =
+                                  (requestData?['reservedDonors']
+                                      as List<dynamic>?) ??
+                                  [];
+
+                              if (reservedDonors.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+
+                              return Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                color: Colors.blue[50],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: Colors.blue[700],
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'Reserved Donor',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Text(
+                                        'Mark this request as completed when the donation has been received.',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: _isLoading
+                                              ? null
+                                              : _markAsCompleted,
+                                          icon: _isLoading
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(Colors.white),
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.white,
+                                                ),
+                                          label: const Text(
+                                            'Mark as Completed',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.blue[700],
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 16),
                         ],
