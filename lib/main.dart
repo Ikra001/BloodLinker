@@ -1,17 +1,22 @@
-import 'package:blood_linker/pages/home_page.dart';
-import 'package:blood_linker/pages/login_page.dart';
-import 'package:blood_linker/pages/register_page.dart';
-import 'package:blood_linker/pages/welcome_page.dart';
-import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
+import 'package:blood_linker/pages/welcome_page.dart';
+import 'package:blood_linker/pages/login_page.dart';
+import 'package:blood_linker/pages/register_page.dart';
+import 'package:blood_linker/pages/home_page.dart';
+import 'package:blood_linker/pages/request_blood_page.dart';
+import 'package:blood_linker/constants.dart';
+import 'package:blood_linker/auth/auth_manager.dart';
+
 void main() async {
+  // Initialize Firebase
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
@@ -21,17 +26,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => AuthManager(),
+      create: (_) => AuthManager(),
       child: MaterialApp(
-        title: 'Flutter Demo',
+        title: Constants.appName,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          colorScheme: ColorScheme.fromSeed(seedColor: Constants.primaryColor),
         ),
         home: const WelcomePage(),
         routes: {
+          WelcomePage.route: (context) => const WelcomePage(),
           LoginPage.route: (context) => const LoginPage(),
-          HomePage.route: (context) => const HomePage(),
           RegisterPage.route: (context) => const RegisterPage(),
+          HomePage.route: (context) => const HomePage(),
+          RequestBloodPage.route: (context) => const RequestBloodPage(),
         },
       ),
     );

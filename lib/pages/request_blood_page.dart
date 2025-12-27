@@ -1,7 +1,9 @@
-import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:blood_linker/models/blood_type.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/constants.dart';
+import 'package:blood_linker/pages/map_location_page.dart';
 
 class RequestBloodPage extends StatefulWidget {
   static const route = '/request_blood';
@@ -17,51 +19,70 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
   final _patientNameController = TextEditingController();
   final _bagsController = TextEditingController();
   final _contactController = TextEditingController();
-  final _locationController = TextEditingController();
 
-  // Default to A+ or generic placeholder
-  String _selectedBloodGroup = 'A Positive';
+  String? _selectedBloodGroup;
+  Map<String, dynamic>? _selectedLocation;
 
   @override
   void dispose() {
     _patientNameController.dispose();
     _bagsController.dispose();
     _contactController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
-  // Helper to format enum names nicely (e.g., "oPositive" -> "O Positive")
-  String _formatBloodType(String name) {
-    return name
-        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
-        .trim()
-        .split(' ')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
+  Future<void> _selectLocation() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (context) => const MapLocationPage()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedLocation = result;
+      });
+    }
   }
 
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a location on the map')),
+        );
+        return;
+      }
+
       final authManager = Provider.of<AuthManager>(context, listen: false);
+
+      final hospitalLocation =
+          _selectedLocation!['hospitalName']?.isNotEmpty == true
+          ? _selectedLocation!['hospitalName'] as String
+          : _selectedLocation!['address'] as String? ?? 'Custom Location';
 
       final success = await authManager.createBloodRequest(
         patientName: _patientNameController.text.trim(),
-        bloodGroup: _selectedBloodGroup,
+        bloodGroup: _selectedBloodGroup!,
         bagsNeeded: int.parse(_bagsController.text.trim()),
         contactNumber: _contactController.text.trim(),
-        hospitalLocation: _locationController.text.trim(),
+        hospitalLocation: hospitalLocation,
+        latitude: _selectedLocation!['latitude'] as double?,
+        longitude: _selectedLocation!['longitude'] as double?,
+        hospitalName: _selectedLocation!['hospitalName'] as String?,
+        address: _selectedLocation!['address'] as String?,
       );
 
-      if (success && mounted) {
+      if (!mounted) return;
+
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Blood request posted successfully!')),
         );
-        Navigator.pop(context); // Go back to Home
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authManager.errorMessage ?? 'Error occurred')),
-        );
+        Navigator.pop(context);
+      } else if (authManager.errorMessage != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authManager.errorMessage!)));
       }
     }
   }
@@ -71,7 +92,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Request Blood'),
-        backgroundColor: const Color(0xFFB71C1C),
+        backgroundColor: Constants.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -86,7 +107,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFB71C1C),
+                  color: Constants.primaryColor,
                 ),
               ),
               const SizedBox(height: 20),
@@ -101,16 +122,21 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
               // Blood Group Dropdown
               DropdownButtonFormField<String>(
-                value: _selectedBloodGroup,
+                initialValue: _selectedBloodGroup,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Blood group is required';
+                  }
+                  return null;
+                },
                 decoration: _inputDecoration(
                   'Blood Group Needed',
                   Icons.bloodtype,
                 ),
-                items: BloodType.values.map((type) {
-                  final formattedName = _formatBloodType(type.name);
+                items: Constants.bloodTypes.map((bloodType) {
                   return DropdownMenuItem(
-                    value: formattedName,
-                    child: Text(formattedName),
+                    value: bloodType,
+                    child: Text(bloodType),
                   );
                 }).toList(),
                 onChanged: (val) => setState(() => _selectedBloodGroup = val!),
@@ -133,15 +159,73 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Hospital/Location
-              TextFormField(
-                controller: _locationController,
-                decoration: _inputDecoration(
-                  'Hospital / Location',
-                  Icons.location_on,
+              // Hospital/Location Selection
+              InkWell(
+                onTap: _selectLocation,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on, color: Constants.primaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedLocation != null
+                                  ? (_selectedLocation!['hospitalName']
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true
+                                        ? _selectedLocation!['hospitalName']
+                                              as String
+                                        : 'Custom Location')
+                                  : 'Hospital / Location',
+                              style: TextStyle(
+                                color: _selectedLocation != null
+                                    ? Colors.black
+                                    : Colors.grey,
+                                fontWeight: _selectedLocation != null
+                                    ? FontWeight.w500
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            if (_selectedLocation != null &&
+                                _selectedLocation!['address'] != null)
+                              Text(
+                                _selectedLocation!['address'] as String,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
                 ),
-                validator: (v) => v!.isEmpty ? 'Enter location' : null,
               ),
+              if (_selectedLocation == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 12),
+                  child: Text(
+                    'Please select a location',
+                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                  ),
+                ),
               const SizedBox(height: 15),
 
               // Contact Number
@@ -157,7 +241,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ElevatedButton(
                 onPressed: _submitRequest,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB71C1C),
+                  backgroundColor: Constants.primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -178,10 +262,10 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFFB71C1C)),
+      prefixIcon: Icon(icon, color: Constants.primaryColor),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Color(0xFFB71C1C), width: 2),
+        borderSide: BorderSide(color: Constants.primaryColor, width: 2),
         borderRadius: BorderRadius.circular(12),
       ),
     );

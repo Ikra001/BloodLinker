@@ -83,5 +83,4 @@ class DefaultFirebaseOptions {
     authDomain: 'bloodlinker-b8d91.firebaseapp.com',
     storageBucket: 'bloodlinker-b8d91.firebasestorage.app',
   );
-
 }

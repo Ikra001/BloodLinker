@@ -4,7 +4,7 @@ class BloodRequest {
   final String id;
   final String requesterId;
   final String patientName;
-  final String bloodGroup; // Storing as String for simplicity (e.g., 'B+')
+  final String bloodGroup; // In A+ format
   final int bagsNeeded;
   final String contactNumber;
   final String hospitalLocation;
@@ -21,7 +21,7 @@ class BloodRequest {
     required this.requestDate,
   });
 
-  // Convert to Map for Firestore
+  // Convert to Firestore Map
   Map<String, dynamic> toMap() {
     return {
       'requesterId': requesterId,
@@ -34,7 +34,7 @@ class BloodRequest {
     };
   }
 
-  // Create object from Firestore
+  // Create from Firestore DocumentSnapshot
   factory BloodRequest.fromMap(Map<String, dynamic> map, String documentId) {
     return BloodRequest(
       id: documentId,

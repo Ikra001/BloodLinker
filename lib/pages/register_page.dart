@@ -1,9 +1,11 @@
-import 'package:blood_linker/pages/home_page.dart';
-import 'package:blood_linker/pages/login_page.dart';
-import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:blood_linker/models/blood_type.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/constants.dart';
+import 'package:blood_linker/pages/last_donation_page.dart';
+import 'package:blood_linker/pages/login_page.dart';
+import 'package:blood_linker/widgets/gradient_scaffold.dart';
 
 class RegisterPage extends StatefulWidget {
   static const route = '/register';
@@ -22,8 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneController = TextEditingController();
   String? _selectedBloodType;
 
-  // Removed: _selectedUserType, _lastDonationDate, _needDate, _bagsNeeded
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -33,23 +33,26 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future<void> onPressedRegister(BuildContext context) async {
-    if (_formKey.currentState?.validate() ?? false) {
+  Future<void> onPressedRegister() async {
+    if ((_formKey.currentState?.validate() ?? false) &&
+        _selectedBloodType != null) {
       final authManager = Provider.of<AuthManager>(context, listen: false);
 
-      // NOTE: You must also update your AuthManager to remove these parameters
       final success = await authManager.registerWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
-        bloodType: _selectedBloodType,
-        // Removed userType, lastDonationDate, needDate, bagsNeeded
+        bloodType: _selectedBloodType!,
       );
 
-      if (success && mounted) {
-        Navigator.pushReplacementNamed(context, HomePage.route);
-      } else if (mounted && authManager.errorMessage != null) {
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LastDonationPage()),
+        );
+      } else if (authManager.errorMessage != null) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(authManager.errorMessage!)));
@@ -57,234 +60,169 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // Removed _selectDate function
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFB71C1C), Color(0xFFE57373)],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Card(
-              elevation: 10,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFB71C1C),
-                        ),
+    return GradientScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Card(
+            elevation: 10,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Create Account',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Constants.primaryColor,
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Join BloodLinker today',
-                        style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Join BloodLinker today',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Name
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: Constants.roundedInputDecoration(
+                        labelText: 'Name',
+                        prefixIcon: Icons.person,
                       ),
-                      const SizedBox(height: 30),
+                      validator: (value) =>
+                          Constants.requiredValidator(value, 'Name'),
+                    ),
+                    const SizedBox(height: 20),
 
-                      // Name
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Name',
-                          prefixIcon: const Icon(Icons.person),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Name is required';
-                          }
-                          return null;
-                        },
+                    // Email
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: Constants.roundedInputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icons.email,
                       ),
-                      const SizedBox(height: 20),
+                      validator: Constants.emailValidator,
+                    ),
+                    const SizedBox(height: 20),
 
-                      // Email
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: const Icon(Icons.email),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Email is required';
-                          }
-                          if (!RegExp(
-                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                          ).hasMatch(value)) {
-                            return 'Invalid email';
-                          }
-                          return null;
-                        },
+                    // Phone
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: Constants.roundedInputDecoration(
+                        labelText: 'Phone',
+                        prefixIcon: Icons.phone,
                       ),
-                      const SizedBox(height: 20),
+                      validator: (value) =>
+                          Constants.requiredValidator(value, 'Phone'),
+                    ),
+                    const SizedBox(height: 20),
 
-                      // Phone
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: 'Phone',
-                          prefixIcon: const Icon(Icons.phone),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Phone is required';
-                          }
-                          return null;
-                        },
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: Constants.roundedInputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: Icons.lock,
                       ),
-                      const SizedBox(height: 20),
+                      validator: (value) {
+                        final required = Constants.requiredValidator(
+                          value,
+                          'Password',
+                        );
+                        if (required != null) return required;
+                        if (value!.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
 
-                      // Password
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Password is required';
-                          }
-                          if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
+                    // Blood Type
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedBloodType,
+                      decoration: Constants.roundedInputDecoration(
+                        labelText: 'Blood Type',
+                        prefixIcon: Icons.bloodtype,
                       ),
-                      const SizedBox(height: 20),
+                      items: Constants.bloodTypes.map((bloodType) {
+                        return DropdownMenuItem(
+                          value: bloodType,
+                          child: Text(bloodType),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBloodType = value;
+                        });
+                      },
+                      validator: (value) =>
+                          Constants.requiredValidator(value, 'Blood type'),
+                    ),
 
-                      // Blood Type (Kept this as it is essential)
-                      DropdownButtonFormField<String>(
-                        value: _selectedBloodType,
-                        decoration: InputDecoration(
-                          labelText: 'Blood Type',
-                          prefixIcon: const Icon(Icons.bloodtype),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        items: BloodType.values.map((bloodType) {
-                          final displayName = bloodType.name
-                              .replaceAllMapped(
-                                RegExp(r'([A-Z])'),
-                                (match) => ' ${match.group(1)}',
-                              )
-                              .trim()
-                              .split(' ')
-                              .map(
-                                (word) =>
-                                    word[0].toUpperCase() + word.substring(1),
-                              )
-                              .join(' ');
-                          return DropdownMenuItem(
-                            value: bloodType.name,
-                            child: Text(displayName),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedBloodType = value;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Blood type is required';
-                          }
-                          return null;
-                        },
-                      ),
+                    const SizedBox(height: 30),
 
-                      // Removed User Type Dropdown and Date Fields here
-                      const SizedBox(height: 30),
-
-                      // Register Button
-                      Consumer<AuthManager>(
-                        builder: (context, authManager, child) {
-                          return SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: authManager.isLoading
-                                  ? null
-                                  : () => onPressedRegister(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFB71C1C),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              child: authManager.isLoading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Register',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                      ),
+                    // Register Button
+                    Consumer<AuthManager>(
+                      builder: (context, authManager, child) {
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: authManager.isLoading
+                                ? null
+                                : onPressedRegister,
+                            style: Constants.primaryButtonStyle(),
+                            child: authManager.isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
                                     ),
-                            ),
-                          );
-                        },
-                      ),
+                                  )
+                                : const Text(
+                                    'Register',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        );
+                      },
+                    ),
 
-                      const SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushReplacementNamed(
-                            context,
-                            LoginPage.route,
-                          );
-                        },
-                        child: const Text(
-                          "Already have an account? Login",
-                          style: TextStyle(color: Color(0xFFB71C1C)),
-                        ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(
+                          context,
+                          LoginPage.route,
+                        );
+                      },
+                      child: const Text(
+                        "Already have an account? Login",
+                        style: TextStyle(color: Constants.primaryColor),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

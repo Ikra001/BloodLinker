@@ -1,3 +1,6 @@
 {
-  "cmake.sourceDirectory": "P:/BloodLinker/blood_linker/linux"
+  "cmake.sourceDirectory": "P:/BloodLinker/blood_linker/linux",
+  "cSpell.words": [
+    "Nominatim"
+  ]
 }

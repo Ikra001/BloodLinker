@@ -49,5 +49,9 @@
 	<array>
   	<string>tel</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to find nearby hospitals for blood requests.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location to find nearby hospitals for blood requests.</string>
 </dict>
 </plist>
