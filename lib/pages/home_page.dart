@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,18 +8,37 @@ import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
-import 'package:blood_linker/pages/my_requests_page.dart'; // <--- ADDED IMPORT
+import 'package:blood_linker/pages/my_requests_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   static const route = '/home';
 
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // 1. STATE VARIABLE: Which filter is currently active?
+  String _selectedFilter = 'All';
+
+  // The list of filters to show
+  final List<String> _filterOptions = [
+    'All',
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+  ];
+
   Future<void> onPressedLogout(BuildContext context) async {
     final authManager = Provider.of<AuthManager>(context, listen: false);
-
     await authManager.logout();
-
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const WelcomePage()),
@@ -31,15 +49,27 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 2. QUERY LOGIC: Create the base query
+    Query<Map<String, dynamic>> requestsQuery = FirebaseFirestore.instance
+        .collection('requests')
+        .orderBy('requestDate', descending: true);
+
+    // 3. APPLY FILTER: If not 'All', filter by bloodGroup
+    if (_selectedFilter != 'All') {
+      requestsQuery = requestsQuery.where(
+        'bloodGroup',
+        isEqualTo: _selectedFilter,
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Light grey background
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text('BloodLinker Dashboard'),
         backgroundColor: Constants.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // --- NEW: My Requests Button ---
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -47,11 +77,9 @@ class HomePage extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => const MyRequestsPage()),
               );
             },
-            icon: const Icon(Icons.history), // Clock/History icon
+            icon: const Icon(Icons.history),
             tooltip: 'My Requests',
           ),
-
-          // --- End New Button ---
           IconButton(
             onPressed: () => onPressedLogout(context),
             icon: const Icon(Icons.logout),
@@ -60,13 +88,14 @@ class HomePage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // 1. TOP SECTION: User Info & Actions
+          // TOP SECTION: User Info & Actions
           _buildTopSection(context),
 
-          // 2. HEADER: "Recent Requests"
+          // HEADER + FILTER CHIPS
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(20, 20, 0, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   "Recent Requests",
@@ -76,44 +105,96 @@ class HomePage extends StatelessWidget {
                     color: Colors.black87,
                   ),
                 ),
-                const Spacer(),
-                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  "Live Feed",
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                const SizedBox(height: 10),
+
+                // --- NEW: Horizontal Filter List ---
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _filterOptions.map((filter) {
+                      final isSelected = _selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(filter),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedFilter = filter;
+                              });
+                            }
+                          },
+                          // Styling for Active vs Inactive state
+                          selectedColor: Constants.primaryColor,
+                          backgroundColor: Colors.white,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? Constants.primaryColor
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
+                // --- END FILTER LIST ---
               ],
             ),
           ),
 
-          // 3. BOTTOM SECTION: The Feed (StreamBuilder)
+          // THE FEED
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Listen to the 'requests' collection, ordered by newest first
-              stream: FirebaseFirestore.instance
-                  .collection('requests')
-                  .orderBy('requestDate', descending: true)
-                  .snapshots(),
+              stream: requestsQuery.snapshots(), // Use our filtered query here
               builder: (context, snapshot) {
-                // Handling Loading State
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
-                // Handling Error State
                 if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
+                  // This is where the INDEX error might show up
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        "Need Index or Error: ${snapshot.error}",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  );
                 }
-
-                // Handling Empty State
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text("No blood requests found nearby."),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.bloodtype_outlined,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _selectedFilter == 'All'
+                              ? "No requests found nearby."
+                              : "No $_selectedFilter requests found.",
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
                   );
                 }
 
-                // Displaying the List
                 final requests = snapshot.data!.docs;
 
                 return ListView.builder(
@@ -132,9 +213,8 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // --- WIDGETS ---
+  // --- WIDGETS (Unchanged) ---
 
-  // The Profile and "Request Blood" Button Section
   Widget _buildTopSection(BuildContext context) {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
@@ -156,7 +236,6 @@ class HomePage extends StatelessWidget {
                 radius: 30,
                 backgroundColor: Colors.white,
                 child: Text(
-                  // Use the helper function here
                   _getDisplayBloodGroup(user?.bloodType),
                   style: const TextStyle(
                     color: Constants.primaryColor,
@@ -185,6 +264,7 @@ class HomePage extends StatelessWidget {
                         fontSize: 12,
                       ),
                     ),
+                    // ... (Keeping your existing logic for donation date)
                     if (user?.lastDonationDate != null) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -274,7 +354,6 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- TOP ROW: Blood Group & Location ---
             Row(
               children: [
                 Container(
@@ -309,8 +388,6 @@ class HomePage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-
-            // --- MIDDLE ROW: Patient Name & Bags ---
             Row(
               children: [
                 const Icon(Icons.person, size: 16, color: Colors.grey),
@@ -322,8 +399,6 @@ class HomePage extends StatelessWidget {
                 Text("${data['bagsNeeded']} Bags"),
               ],
             ),
-
-            // --- TIME ROW (ADDED HERE) ---
             const SizedBox(height: 8),
             Row(
               children: [
@@ -336,21 +411,13 @@ class HomePage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
-
-            // --- BOTTOM ROW: The Call Button (FIXED) ---
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  // 1. Get the number
                   String phoneNumber = data['contactNumber'] ?? '';
-
-                  // 2. Simple check: Is there a number?
                   if (phoneNumber.isNotEmpty) {
-                    // 3. Create the command to open the dialer
                     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-
-                    // 4. FORCE open the dialer (we removed the 'if' check)
                     try {
                       await launchUrl(launchUri);
                     } catch (e) {
@@ -377,7 +444,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Small helper to show "Just now" or date
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'Recently';
     if (timestamp is Timestamp) {
@@ -391,17 +457,10 @@ class HomePage extends StatelessWidget {
     return 'Recently';
   }
 
-  // Helper to display blood type (already in A+ format)
   String _getDisplayBloodGroup(String? bloodType) {
     if (bloodType == null || bloodType.isEmpty) return "N/A";
-
-    // Handle legacy formats if any exist in database
-    if (bloodType.contains('(+ve)')) {
-      return bloodType.replaceAll(' (+ve)', '+');
-    }
-    if (bloodType.contains('(-ve)')) {
-      return bloodType.replaceAll(' (-ve)', '-');
-    }
+    if (bloodType.contains('(+ve)')) return bloodType.replaceAll(' (+ve)', '+');
+    if (bloodType.contains('(-ve)')) return bloodType.replaceAll(' (-ve)', '-');
     if (bloodType.toLowerCase().contains('positive') ||
         bloodType.toLowerCase().contains('negative')) {
       final clean = bloodType.toLowerCase();
@@ -413,21 +472,18 @@ class HomePage extends StatelessWidget {
           .toUpperCase();
       return '$type$sign';
     }
-
     return bloodType;
   }
 
-  // Helper to format last donation date
   String _formatLastDonationDate(DateTime date) {
     final difference = DateTime.now().difference(date);
-
-    if (difference.inDays == 0) {
+    if (difference.inDays == 0)
       return 'Today';
-    } else if (difference.inDays == 1) {
+    else if (difference.inDays == 1)
       return 'Yesterday';
-    } else if (difference.inDays < 30) {
+    else if (difference.inDays < 30)
       return '${difference.inDays} days ago';
-    } else if (difference.inDays < 365) {
+    else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
       return months == 1 ? '1 month ago' : '$months months ago';
     } else {
