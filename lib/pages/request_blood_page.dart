@@ -237,7 +237,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
             ),
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else if (authManager.errorMessage != null) {
         ScaffoldMessenger.of(
           context,

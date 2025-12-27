@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/utils/logger.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/pages/request_blood_page.dart';
 
 class RequestDetailsPage extends StatefulWidget {
   final Map<String, dynamic> requestData;
@@ -432,6 +433,157 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _fetchDonorsData(
+    List<dynamic> interestedDonorIds,
+    List<dynamic> reservedDonorIds,
+  ) async {
+    final List<Map<String, dynamic>> donors = [];
+
+    for (final donorId in interestedDonorIds) {
+      if (donorId is! String) continue;
+
+      try {
+        final donorDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(donorId)
+            .get();
+
+        if (donorDoc.exists) {
+          final donorData = donorDoc.data();
+          donors.add({
+            'id': donorId,
+            'name': donorData?['name'] ?? 'Unknown',
+            'phone': donorData?['phone'] ?? '',
+            'isReserved': reservedDonorIds.contains(donorId),
+          });
+        }
+      } catch (e) {
+        AppLogger.error('Error loading donor data for $donorId', e);
+      }
+    }
+
+    return donors;
+  }
+
+  Future<void> _reserveDonor(String donorId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final requestRef = FirebaseFirestore.instance
+          .collection('requests')
+          .doc(widget.requestId);
+
+      await requestRef.update({
+        'reservedDonors': FieldValue.arrayUnion([donorId]),
+      });
+
+      // The StreamBuilder will automatically update the list
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Donor reserved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Error reserving donor', e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleEdit() async {
+    // Navigate to edit page
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RequestBloodPage(
+          requestId: widget.requestId,
+          initialData: widget.requestData,
+        ),
+      ),
+    );
+
+    // If the edit was successful, pop this page to refresh
+    if (result == true && mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Request?"),
+        content: const Text(
+          "This will permanently remove this request from the live feed.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('requests')
+            .doc(widget.requestId)
+            .delete();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Request deleted successfully"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        AppLogger.error('Error deleting request', e);
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _checkIfInterested() async {
     final authManager = Provider.of<AuthManager>(context, listen: false);
     final user = authManager.user;
@@ -734,49 +886,415 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Interested Button (shown when eligible)
-                    if (isEligible)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _handleInterested,
-                          icon: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                    // Edit/Delete buttons (shown if current user is requester) or Interested button (shown if eligible and not requester)
+                    Builder(
+                      builder: (context) {
+                        final authManager = Provider.of<AuthManager>(context);
+                        final currentUser = authManager.user;
+                        final requestUserId =
+                            widget.requestData['userId'] as String?;
+                        final isRequester =
+                            currentUser != null &&
+                            requestUserId != null &&
+                            requestUserId == currentUser.uid;
+
+                        if (isRequester) {
+                          // Show Edit and Delete buttons for requester
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading ? null : _handleEdit,
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Edit Request',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[700],
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                )
-                              : Icon(
-                                  _isInterested ? Icons.check : Icons.favorite,
-                                  color: Colors.white,
                                 ),
-                          label: Text(
-                            _isInterested
-                                ? 'Remove Interest'
-                                : 'I\'m Interested',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isInterested
-                                ? Colors.orange[700]
-                                : Constants.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _isLoading ? null : _handleDelete,
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Delete Request',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red[700],
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        } else if (isEligible) {
+                          // Show Interested button for eligible users who are not the requester
+                          return SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : _handleInterested,
+                              icon: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      _isInterested
+                                          ? Icons.check
+                                          : Icons.favorite,
+                                      color: Colors.white,
+                                    ),
+                              label: Text(
+                                _isInterested
+                                    ? 'Remove Interest'
+                                    : 'I\'m Interested',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isInterested
+                                    ? Colors.orange[700]
+                                    : Constants.primaryColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
+                          );
+                        } else {
+                          return const SizedBox.shrink();
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
+
+            // Interested Donors List (only shown if current user is the requester)
+            Builder(
+              builder: (context) {
+                final authManager = Provider.of<AuthManager>(context);
+                final currentUser = authManager.user;
+                final requestUserId = widget.requestData['userId'] as String?;
+                final isRequester =
+                    currentUser != null &&
+                    requestUserId != null &&
+                    requestUserId == currentUser.uid;
+
+                if (!isRequester) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.favorite,
+                                  color: Constants.primaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Interested Donors',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            StreamBuilder<DocumentSnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('requests')
+                                  .doc(widget.requestId)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+
+                                if (!snapshot.hasData) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'No donors have shown interest yet.',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final requestData =
+                                    snapshot.data!.data()
+                                        as Map<String, dynamic>?;
+                                final interestedDonorIds =
+                                    (requestData?['interestedDonors']
+                                        as List<dynamic>?) ??
+                                    [];
+                                final reservedDonorIds =
+                                    (requestData?['reservedDonors']
+                                        as List<dynamic>?) ??
+                                    [];
+
+                                if (interestedDonorIds.isEmpty) {
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'No donors have shown interest yet.',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                return FutureBuilder<
+                                  List<Map<String, dynamic>>
+                                >(
+                                  future: _fetchDonorsData(
+                                    interestedDonorIds,
+                                    reservedDonorIds,
+                                  ),
+                                  builder: (context, donorsSnapshot) {
+                                    if (donorsSnapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      );
+                                    }
+
+                                    final donors = donorsSnapshot.data ?? [];
+
+                                    if (donors.isEmpty) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Text(
+                                          'No donors have shown interest yet.',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return Column(
+                                      children: donors.map((donor) {
+                                        final isReserved =
+                                            donor['isReserved'] as bool? ??
+                                            false;
+                                        return Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: isReserved
+                                                ? Colors.green[50]
+                                                : Colors.grey[50],
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: isReserved
+                                                  ? Colors.green
+                                                  : Colors.grey[300]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          donor['name']
+                                                                  as String? ??
+                                                              'Unknown',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                        if (isReserved) ...[
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 8,
+                                                                  vertical: 4,
+                                                                ),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                                  color: Colors
+                                                                      .green,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        12,
+                                                                      ),
+                                                                ),
+                                                            child: const Text(
+                                                              'Reserved',
+                                                              style: TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              // Call button
+                                              IconButton(
+                                                icon: Icon(
+                                                  Icons.phone,
+                                                  color: Constants.primaryColor,
+                                                ),
+                                                onPressed: () {
+                                                  final phone =
+                                                      donor['phone']
+                                                          as String? ??
+                                                      '';
+                                                  if (phone.isNotEmpty) {
+                                                    _makeCall(phone);
+                                                  } else {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Phone number not available',
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.orange,
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                tooltip: 'Call donor',
+                                              ),
+                                              // Reserve button
+                                              if (!isReserved)
+                                                ElevatedButton(
+                                                  onPressed: _isLoading
+                                                      ? null
+                                                      : () => _reserveDonor(
+                                                          donor['id'] as String,
+                                                        ),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        Colors.green[700],
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 8,
+                                                        ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    'Reserve',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
+            ),
 
             // Location Information
             Card(
