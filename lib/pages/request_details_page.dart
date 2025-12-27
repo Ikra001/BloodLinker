@@ -25,6 +25,7 @@ class RequestDetailsPage extends StatefulWidget {
 class _RequestDetailsPageState extends State<RequestDetailsPage> {
   bool _isInterested = false;
   bool _isLoading = false;
+  String? _requesterName;
 
   Future<void> _makeCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) {
@@ -391,10 +392,44 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   @override
   void initState() {
     super.initState();
-    // Check if user is already interested
+    // Check if user is already interested and load requester name
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkIfInterested();
+      _loadRequesterName();
     });
+  }
+
+  Future<void> _loadRequesterName() async {
+    try {
+      final userId = widget.requestData['userId'] as String?;
+      if (userId == null || userId.isEmpty) {
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists && mounted) {
+        final userData = userDoc.data();
+        final name = userData?['name'] as String?;
+        setState(() {
+          _requesterName = name ?? 'Unknown';
+        });
+      } else if (mounted) {
+        setState(() {
+          _requesterName = 'Unknown';
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Error loading requester name', e);
+      if (mounted) {
+        setState(() {
+          _requesterName = 'Unknown';
+        });
+      }
+    }
   }
 
   Future<void> _checkIfInterested() async {
@@ -512,13 +547,31 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                       const SizedBox(height: 4),
                       Padding(
                         padding: const EdgeInsets.only(left: 32),
-                        child: Text(
-                          "Posted ${_formatRelativeTime(requestDate)}",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            fontStyle: FontStyle.italic,
-                          ),
+                        child: Builder(
+                          builder: (context) {
+                            final requestUserId =
+                                widget.requestData['userId'] as String?;
+                            final currentUserId = authManager.user?.uid;
+                            final isCurrentUser =
+                                requestUserId != null &&
+                                currentUserId != null &&
+                                requestUserId == currentUserId;
+
+                            final postedText = isCurrentUser
+                                ? "Posted ${_formatRelativeTime(requestDate)} by you"
+                                : _requesterName != null
+                                ? "Posted ${_formatRelativeTime(requestDate)} by $_requesterName"
+                                : "Posted ${_formatRelativeTime(requestDate)}";
+
+                            return Text(
+                              postedText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -638,45 +691,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                         _formatWhenNeeded(whenNeeded),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    // Interested Button (shown when eligible)
-                    if (isEligible)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _handleInterested,
-                          icon: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  _isInterested ? Icons.check : Icons.favorite,
-                                  color: Colors.white,
-                                ),
-                          label: Text(
-                            _isInterested
-                                ? 'Remove Interest'
-                                : 'I\'m Interested',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _isInterested
-                                ? Colors.orange[700]
-                                : Constants.primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
                     // Share Button (shown for both eligible and not eligible)
                     if (isEligible) const SizedBox(height: 12),
                     SizedBox(
@@ -719,6 +733,45 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    // Interested Button (shown when eligible)
+                    if (isEligible)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : _handleInterested,
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  _isInterested ? Icons.check : Icons.favorite,
+                                  color: Colors.white,
+                                ),
+                          label: Text(
+                            _isInterested
+                                ? 'Remove Interest'
+                                : 'I\'m Interested',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isInterested
+                                ? Colors.orange[700]
+                                : Constants.primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
