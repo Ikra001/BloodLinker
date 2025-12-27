@@ -206,11 +206,15 @@ class AuthManager extends ChangeNotifier {
     required String bloodGroup,
     required int bagsNeeded,
     required String contactNumber,
-    required String hospitalLocation,
+    int? age,
+    String? gender,
+    DateTime? whenNeeded,
     double? latitude,
     double? longitude,
     String? hospitalName,
     String? address,
+    bool isEmergency = false,
+    String? additionalNotes,
   }) async {
     _setLoading(true);
     try {
@@ -222,12 +226,21 @@ class AuthManager extends ChangeNotifier {
         'bloodGroup': bloodGroup,
         'bagsNeeded': bagsNeeded,
         'contactNumber': contactNumber,
-        'hospitalLocation': hospitalLocation,
         'requestDate': FieldValue.serverTimestamp(),
         'status': 'pending',
+        'isEmergency': isEmergency,
       };
 
-      // Add location data if available
+      // Add optional fields
+      if (age != null) {
+        requestData['age'] = age;
+      }
+      if (gender != null && gender.isNotEmpty) {
+        requestData['gender'] = gender;
+      }
+      if (whenNeeded != null) {
+        requestData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
+      }
       if (latitude != null && longitude != null) {
         requestData['latitude'] = latitude;
         requestData['longitude'] = longitude;
@@ -237,6 +250,9 @@ class AuthManager extends ChangeNotifier {
       }
       if (address != null && address.isNotEmpty) {
         requestData['address'] = address;
+      }
+      if (additionalNotes != null && additionalNotes.isNotEmpty) {
+        requestData['additionalNotes'] = additionalNotes;
       }
 
       await _firestore.collection('requests').add(requestData);

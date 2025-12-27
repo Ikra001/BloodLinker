@@ -139,6 +139,15 @@ class RequestDetailsPage extends StatelessWidget {
     return 'Recently';
   }
 
+  String _formatWhenNeeded(dynamic timestamp) {
+    if (timestamp == null) return 'Not specified';
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      return '${date.day}/${date.month}/${date.year}';
+    }
+    return 'Not specified';
+  }
+
   @override
   Widget build(BuildContext context) {
     // Handle both double and num types from Firestore
@@ -151,13 +160,17 @@ class RequestDetailsPage extends StatelessWidget {
         ? (lngValue is num ? lngValue.toDouble() : lngValue as double?)
         : null;
     final hospitalName = requestData['hospitalName'] as String?;
-    final hospitalLocation =
-        requestData['hospitalLocation'] as String? ?? 'Unknown Location';
+    final address = requestData['address'] as String?;
     final contactNumber = requestData['contactNumber'] as String? ?? '';
     final patientName = requestData['patientName'] as String? ?? 'N/A';
     final bloodGroup = requestData['bloodGroup'] as String? ?? 'Unknown';
     final bagsNeeded = requestData['bagsNeeded'] as int? ?? 1;
     final requestDate = requestData['requestDate'];
+    final age = requestData['age'] as int?;
+    final gender = requestData['gender'] as String?;
+    final whenNeeded = requestData['whenNeeded'];
+    final isEmergency = requestData['isEmergency'] as bool? ?? false;
+    final additionalNotes = requestData['additionalNotes'] as String?;
 
     return Scaffold(
       appBar: AppBar(
@@ -215,11 +228,58 @@ class RequestDetailsPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if (isEmergency)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red, width: 2),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.warning,
+                              color: Colors.red[700],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'EMERGENCY',
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     _buildInfoRow('Patient Name', patientName),
+                    if (age != null) ...[
+                      const SizedBox(height: 8),
+                      _buildInfoRow('Age', '$age years'),
+                    ],
+                    if (gender != null) ...[
+                      const SizedBox(height: 8),
+                      _buildInfoRow('Gender', gender),
+                    ],
                     const SizedBox(height: 8),
                     _buildInfoRow('Bags Needed', '$bagsNeeded'),
                     const SizedBox(height: 8),
                     _buildInfoRow('Posted', _formatTimestamp(requestDate)),
+                    if (whenNeeded != null) ...[
+                      const SizedBox(height: 8),
+                      _buildInfoRow(
+                        'When Needed',
+                        _formatWhenNeeded(whenNeeded),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     // Call Button
                     SizedBox(
@@ -267,7 +327,7 @@ class RequestDetailsPage extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         const Text(
-                          'Hospital Location',
+                          'Hospital Address',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -288,9 +348,28 @@ class RequestDetailsPage extends StatelessWidget {
                         ),
                       ),
                     Text(
-                      hospitalLocation,
+                      address ?? hospitalName ?? 'Address not available',
                       style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     ),
+                    if (additionalNotes != null &&
+                        additionalNotes.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Additional Notes',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        additionalNotes,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     // Directions Button
                     SizedBox(

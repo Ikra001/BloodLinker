@@ -300,7 +300,9 @@ class HomePage extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      data['hospitalLocation'] ?? 'Unknown Location',
+                      data['hospitalName'] ??
+                          data['address'] ??
+                          'Unknown Location',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
