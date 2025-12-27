@@ -360,26 +360,16 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                Icon(
-                  Icons.favorite_border,
-                  size: 48,
-                  color: Colors.grey[400],
-                ),
+                Icon(Icons.favorite_border, size: 48, color: Colors.grey[400]),
                 const SizedBox(height: 12),
                 Text(
                   'No interested requests yet',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Show interest in requests to see them here',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
               ],
             ),
@@ -387,18 +377,18 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final requests = snapshot.data!.docs.toList();
-        
+
         // Sort by requestDate in descending order (most recent first)
         requests.sort((a, b) {
           final aDate = a.data() as Map<String, dynamic>;
           final bDate = b.data() as Map<String, dynamic>;
           final aTimestamp = aDate['requestDate'];
           final bTimestamp = bDate['requestDate'];
-          
+
           if (aTimestamp == null && bTimestamp == null) return 0;
           if (aTimestamp == null) return 1;
           if (bTimestamp == null) return -1;
-          
+
           // Compare timestamps (descending order)
           if (aTimestamp is Timestamp && bTimestamp is Timestamp) {
             return bTimestamp.compareTo(aTimestamp);
@@ -462,7 +452,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.red[50],
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           border: Border.all(
                                             color: Colors.red,
                                             width: 1,
@@ -501,7 +493,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Constants.primaryColor.withOpacity(0.1),
+                                        color: Constants.primaryColor
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -591,8 +584,9 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         validator: (v) {
           if (label == "Age") {
-            if (v != null && v.isNotEmpty && int.tryParse(v) == null)
+            if (v != null && v.isNotEmpty && int.tryParse(v) == null) {
               return "Invalid number";
+            }
           }
           if (label == "Full Name" || label == "Phone Number") {
             return (v == null || v.isEmpty) ? "Required" : null;
@@ -641,7 +635,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildBloodTypeField(bool isEditing) {
     if (isEditing) {
       return DropdownButtonFormField<String>(
-        value: _selectedBloodType,
+        initialValue: _selectedBloodType,
         decoration: InputDecoration(
           labelText: "Blood",
           prefixIcon: const Icon(
@@ -816,10 +810,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 8),
                 Text(
                   'You haven\'t been reserved for any requests yet',
-                  style: TextStyle(
-                    color: Colors.green[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.green[600], fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -828,18 +819,18 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final requests = snapshot.data!.docs.toList();
-        
+
         // Sort by requestDate in descending order (most recent first)
         requests.sort((a, b) {
           final aDate = a.data() as Map<String, dynamic>;
           final bDate = b.data() as Map<String, dynamic>;
           final aTimestamp = aDate['requestDate'];
           final bTimestamp = bDate['requestDate'];
-          
+
           if (aTimestamp == null && bTimestamp == null) return 0;
           if (aTimestamp == null) return 1;
           if (bTimestamp == null) return -1;
-          
+
           // Compare timestamps (descending order)
           if (aTimestamp is Timestamp && bTimestamp is Timestamp) {
             return bTimestamp.compareTo(aTimestamp);
@@ -909,7 +900,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.green,
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                         child: const Text(
                                           'RESERVED',
@@ -929,7 +922,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.red[50],
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                             border: Border.all(
                                               color: Colors.red,
                                               width: 1,
@@ -966,8 +961,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Constants.primaryColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: Constants.primaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           bloodGroup,

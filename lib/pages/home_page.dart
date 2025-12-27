@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/request_details_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';

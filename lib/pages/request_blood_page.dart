@@ -289,8 +289,9 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Enter age';
                   final age = int.tryParse(v);
-                  if (age == null || age < 0 || age > 150)
+                  if (age == null || age < 0 || age > 150) {
                     return 'Enter a valid age';
+                  }
                   return null;
                 },
               ),
@@ -298,7 +299,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
               // Gender Dropdown
               DropdownButtonFormField<String>(
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 decoration: _inputDecoration('Gender', Icons.person_outline),
                 items: const [
                   DropdownMenuItem(value: 'Male', child: Text('Male')),
@@ -314,7 +315,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
               // Blood Group Dropdown
               DropdownButtonFormField<String>(
-                value: _selectedBloodGroup, // Handles pre-fill
+                initialValue: _selectedBloodGroup, // Handles pre-fill
                 validator: (value) => (value == null || value.isEmpty)
                     ? 'Blood group is required'
                     : null,
