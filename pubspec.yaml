@@ -45,6 +45,8 @@ dependencies:
   http: ^1.2.2
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+
   flutter_test:
     sdk: flutter
 
@@ -58,12 +60,30 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
-# The following section is specific to Flutter packages.
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+
+flutter_native_splash:
+  color: "#e62412"
+  image: assets/logo.png
+  android: true
+  ios: true
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+
 flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo.png
+
+# The following section is specific to Flutter packages.
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

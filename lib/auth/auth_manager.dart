@@ -333,4 +333,14 @@ class AuthManager extends ChangeNotifier {
       return false;
     }
   }
+  bool isInitialized = false;
+
+  Future<void> loadCurrentUser() async {
+    if (isInitialized) return;
+
+    // load firestore user here
+    isInitialized = true;
+    notifyListeners();
+  }
+
 }
