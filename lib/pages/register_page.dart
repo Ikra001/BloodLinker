@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:blood_linker/constants.dart';
-import 'package:blood_linker/pages/home_page.dart';
+import 'package:blood_linker/pages/last_donation_page.dart';
 import 'package:blood_linker/pages/login_page.dart';
 import 'package:blood_linker/widgets/gradient_scaffold.dart';
 
@@ -49,9 +49,8 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       if (success) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LastDonationPage()),
         );
       } else if (authManager.errorMessage != null) {
         ScaffoldMessenger.of(

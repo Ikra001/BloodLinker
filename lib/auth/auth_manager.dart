@@ -132,6 +132,35 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
+  // Update last donation date
+  Future<bool> updateLastDonationDate(DateTime? date) async {
+    _setLoading(true);
+    try {
+      if (_user == null) throw Exception("User not logged in");
+
+      final updateData = <String, dynamic>{};
+      if (date != null) {
+        updateData['lastDonationDate'] = Timestamp.fromDate(date);
+      } else {
+        updateData['lastDonationDate'] = null;
+      }
+
+      await _firestore.collection('users').doc(_user!.uid).update(updateData);
+
+      // Reload user data to reflect the change
+      await _loadUserData(_user!.uid);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(
+        false,
+        error: 'Failed to update donation date: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
   // Logout
   Future<void> logout() async {
     _setLoading(true);
