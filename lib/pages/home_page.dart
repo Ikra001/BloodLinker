@@ -4,13 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/request_details_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
 import 'package:blood_linker/pages/my_requests_page.dart';
-import 'package:blood_linker/pages/profile_page.dart'; // <--- ADDED IMPORT
+import 'package:blood_linker/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   static const route = '/home';
@@ -22,10 +21,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // 1. STATE VARIABLE: Which filter is currently active?
   String _selectedFilter = 'All';
 
-  // The list of filters to show
   final List<String> _filterOptions = [
     'All',
     'A+',
@@ -38,25 +35,50 @@ class _HomePageState extends State<HomePage> {
     'O-',
   ];
 
-  Future<void> onPressedLogout(BuildContext context) async {
-    final authManager = Provider.of<AuthManager>(context, listen: false);
-    await authManager.logout();
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const WelcomePage()),
-        (route) => false,
-      );
-    }
+  // --- LOGOUT DIALOG ---
+  void _onPressedLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to log out?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final authManager = Provider.of<AuthManager>(
+                context,
+                listen: false,
+              );
+              await authManager.logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const WelcomePage()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text(
+              "Logout",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // 2. QUERY LOGIC: Create the base query
     Query<Map<String, dynamic>> requestsQuery = FirebaseFirestore.instance
         .collection('requests')
         .orderBy('requestDate', descending: true);
 
-    // 3. APPLY FILTER: If not 'All', filter by bloodGroup
     if (_selectedFilter != 'All') {
       requestsQuery = requestsQuery.where(
         'bloodGroup',
@@ -65,72 +87,35 @@ class _HomePageState extends State<HomePage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text('BloodLinker Dashboard'),
-        backgroundColor: Constants.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MyRequestsPage()),
-              );
-            },
-            icon: const Icon(Icons.history),
-            tooltip: 'My Requests',
-          ),
-
-          // --- NEW: PROFILE BUTTON ---
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfilePage()),
-              );
-            },
-            icon: const Icon(Icons.person),
-            tooltip: 'My Profile',
-          ),
-
-          // ---------------------------
-          IconButton(
-            onPressed: () => onPressedLogout(context),
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF5F7FA),
       body: Column(
         children: [
-          // TOP SECTION: User Info & Actions
-          _buildTopSection(context),
+          _buildModernHeader(context),
 
-          // HEADER + FILTER CHIPS
+          // FILTER SECTION
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 0, 10),
+            padding: const EdgeInsets.fromLTRB(20, 25, 0, 15),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "Recent Requests",
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey[900],
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 10),
-
-                // --- NEW: Horizontal Filter List ---
+                const SizedBox(height: 15),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
                   child: Row(
                     children: _filterOptions.map((filter) {
                       final isSelected = _selectedFilter == filter;
                       return Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.only(right: 10),
                         child: ChoiceChip(
                           label: Text(filter),
                           selected: isSelected,
@@ -141,53 +126,58 @@ class _HomePageState extends State<HomePage> {
                               });
                             }
                           },
-                          // Styling for Active vs Inactive state
-                          selectedColor: Constants.primaryColor,
+                          // --- UPDATED COLORS FOR CONSISTENCY ---
+                          // 1. Use the specific "Elegant Red" used in header/buttons
+                          selectedColor: const Color(0xFFD32F2F),
                           backgroundColor: Colors.white,
+                          checkmarkColor: Colors.white, // Tick is White
+                          // 2. Softer Text Colors
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
+                            color: isSelected ? Colors.white : Colors.grey[600],
                             fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            fontSize: 14,
                           ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+
+                          // 3. Cleaner Shape (No border when selected)
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(50),
                             side: BorderSide(
                               color: isSelected
-                                  ? Constants.primaryColor
-                                  : Colors.grey.shade300,
+                                  ? Colors
+                                        .transparent // No border on selected (Clean look)
+                                  : Colors.grey.withOpacity(
+                                      0.2,
+                                    ), // Very soft border on unselected
+                              width: 1,
                             ),
                           ),
+                          elevation: isSelected ? 4 : 0,
+                          shadowColor: const Color(0xFFD32F2F).withOpacity(0.4),
                         ),
                       );
                     }).toList(),
                   ),
                 ),
-                // --- END FILTER LIST ---
               ],
             ),
           ),
 
-          // THE FEED
+          // REQUEST LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: requestsQuery.snapshots(), // Use our filtered query here
+              stream: requestsQuery.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  // This is where the INDEX error might show up
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        "Need Index or Error: ${snapshot.error}",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  );
+                  return Center(child: Text("Error: ${snapshot.error}"));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
@@ -196,10 +186,10 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Icon(
                           Icons.bloodtype_outlined,
-                          size: 64,
-                          color: Colors.grey[300],
+                          size: 60,
+                          color: Colors.grey[400],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Text(
                           _selectedFilter == 'All'
                               ? "No requests found nearby."
@@ -214,12 +204,13 @@ class _HomePageState extends State<HomePage> {
                 final requests = snapshot.data!.docs;
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  physics: const BouncingScrollPhysics(),
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
                     final doc = requests[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    return _buildRequestCard(context, data, doc.id);
+                    return _buildElegantRequestCard(context, data, doc.id);
                   },
                 );
               },
@@ -230,106 +221,163 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- WIDGETS (Unchanged) ---
-
-  Widget _buildTopSection(BuildContext context) {
+  // --- HEADER WIDGET ---
+  Widget _buildModernHeader(BuildContext context) {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
-      decoration: const BoxDecoration(
-        color: Constants.primaryColor,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(25, 55, 25, 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFFC62828), const Color(0xFFB71C1C)],
         ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(35),
+          bottomRight: Radius.circular(35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFB71C1C).withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.white,
-                child: Text(
-                  _getDisplayBloodGroup(user?.bloodType),
-                  style: const TextStyle(
-                    color: Constants.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+              const Text(
+                'BloodLinker',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildHeaderIcon(
+                    Icons.history_rounded,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MyRequestsPage(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  _buildHeaderIcon(
+                    Icons.person_rounded,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfilePage(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  _buildHeaderIcon(
+                    Icons.logout_rounded,
+                    () => _onPressedLogout(context),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 35),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: CircleAvatar(
+                  radius: 32,
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    _getDisplayBloodGroup(user?.bloodType),
+                    style: const TextStyle(
+                      color: Color(0xFFB71C1C),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Hello, ${user?.name ?? 'User'}",
+                      user?.name ?? 'User',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 6),
                     Text(
                       "Donate Blood, Save Lives.",
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    // ... (Keeping your existing logic for donation date)
-                    if (user?.lastDonationDate != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.calendar_today,
-                            size: 12,
-                            color: Colors.white.withValues(alpha: 0.8),
+                            Icons.calendar_today_rounded,
+                            color: Colors.white.withOpacity(0.9),
+                            size: 13,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
-                            "Last donation: ${_formatLastDonationDate(user!.lastDonationDate!)}",
+                            user?.lastDonationDate != null
+                                ? "Last: ${_formatLastDonationDate(user!.lastDonationDate!)}"
+                                : "No donations yet",
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    ] else ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 12,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            "No donation recorded",
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 58,
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
@@ -339,19 +387,27 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               },
-              icon: const Icon(Icons.add_alert, color: Constants.primaryColor),
+              icon: const Icon(
+                Icons.add_alert_rounded,
+                color: Color(0xFFB71C1C),
+                size: 22,
+              ),
               label: const Text(
                 'Request Blood',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Constants.primaryColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFB71C1C),
+                  letterSpacing: 0.5,
                 ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFB71C1C),
+                elevation: 4,
+                shadowColor: Colors.black.withOpacity(0.15),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
             ),
@@ -361,125 +417,223 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildRequestCard(
+  Widget _buildHeaderIcon(IconData icon, VoidCallback onTap) {
+    return IconButton(
+      onPressed: onTap,
+      icon: Icon(icon, color: Colors.white, size: 26),
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  // --- CARD WIDGET ---
+  Widget _buildElegantRequestCard(
     BuildContext context,
     Map<String, dynamic> data,
     String requestId,
   ) {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  RequestDetailsPage(requestData: data, requestId: requestId),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(15),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      data['bloodGroup'] ?? 'Unknown',
-                      style: const TextStyle(
-                        color: Constants.primaryColor,
-                        fontWeight: FontWeight.bold,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            spreadRadius: 1,
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    RequestDetailsPage(requestData: data, requestId: requestId),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 52,
+                      width: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          data['bloodGroup'] ?? '?',
+                          style: const TextStyle(
+                            color: Color(0xFFD32F2F),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      data['hospitalName'] ??
-                          data['address'] ??
-                          'Unknown Location',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['hospitalName'] ??
+                                data['address'] ??
+                                'Unknown Location',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              color: Colors.grey[900],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Patient Left / Bags Right
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person_rounded,
+                                      size: 15,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        "Patient: ${data['patientName'] ?? 'N/A'}",
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.local_hospital_rounded,
+                                      size: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      "${data['bagsNeeded']} Bags",
+                                      style: TextStyle(
+                                        color: Colors.grey[800],
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 13,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatTimestamp(data['requestDate']),
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 16, color: Colors.grey),
-                  const SizedBox(width: 5),
-                  Text("Patient: ${data['patientName'] ?? 'N/A'}"),
-                  const Spacer(),
-                  const Icon(
-                    Icons.local_hospital,
-                    size: 16,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 5),
-                  Text("${data['bagsNeeded']} Bags"),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Posted: ${_formatTimestamp(data['requestDate'])}",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    String phoneNumber = data['contactNumber'] ?? '';
-                    if (phoneNumber.isNotEmpty) {
-                      final Uri launchUri = Uri(
-                        scheme: 'tel',
-                        path: phoneNumber,
-                      );
-                      try {
-                        await launchUrl(launchUri);
-                      } catch (e) {
-                        AppLogger.error('Error launching phone dialer', e);
+                  ],
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      String phoneNumber = data['contactNumber'] ?? '';
+                      if (phoneNumber.isNotEmpty) {
+                        final Uri launchUri = Uri(
+                          scheme: 'tel',
+                          path: phoneNumber,
+                        );
+                        try {
+                          await launchUrl(launchUri);
+                        } catch (e) {
+                          AppLogger.error('Error launching phone dialer', e);
+                        }
                       }
-                    }
-                  },
-                  icon: const Icon(Icons.phone, color: Colors.white, size: 18),
-                  label: const Text(
-                    "Call to Donate",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Constants.primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    },
+                    icon: const Icon(
+                      Icons.phone_in_talk_rounded,
+                      color: Colors.white,
+                      size: 19,
+                    ),
+                    label: const Text(
+                      "Call to Donate",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD32F2F),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 3,
+                      shadowColor: const Color(0xFFD32F2F).withOpacity(0.4),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -491,9 +645,9 @@ class _HomePageState extends State<HomePage> {
     if (timestamp is Timestamp) {
       final date = timestamp.toDate();
       final difference = DateTime.now().difference(date);
-      if (difference.inDays > 0) return '${difference.inDays} days ago';
-      if (difference.inHours > 0) return '${difference.inHours} hours ago';
-      if (difference.inMinutes > 0) return '${difference.inMinutes} mins ago';
+      if (difference.inDays > 0) return '${difference.inDays}d ago';
+      if (difference.inHours > 0) return '${difference.inHours}h ago';
+      if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
       return 'Just now';
     }
     return 'Recently';

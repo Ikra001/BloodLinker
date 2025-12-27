@@ -606,8 +606,9 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         validator: (v) {
           if (label == "Age") {
-            if (v != null && v.isNotEmpty && int.tryParse(v) == null)
+            if (v != null && v.isNotEmpty && int.tryParse(v) == null) {
               return "Invalid number";
+            }
           }
           if (label == "Full Name" || label == "Phone Number") {
             return (v == null || v.isEmpty) ? "Required" : null;
@@ -656,7 +657,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildBloodTypeField(bool isEditing) {
     if (isEditing) {
       return DropdownButtonFormField<String>(
-        value: _selectedBloodType,
+        initialValue: _selectedBloodType,
         decoration: InputDecoration(
           labelText: "Blood",
           prefixIcon: const Icon(
