@@ -1,10 +1,14 @@
-import 'package:blood_linker/pages/welcome_page.dart';
-import 'package:blood_linker/auth/auth_manager.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for database access
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:blood_linker/pages/request_blood_page.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/constants.dart';
+import 'package:blood_linker/pages/request_blood_page.dart';
+import 'package:blood_linker/pages/welcome_page.dart';
 
 class HomePage extends StatelessWidget {
   static const route = '/home';
@@ -30,7 +34,7 @@ class HomePage extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F5F5), // Light grey background
       appBar: AppBar(
         title: const Text('BloodLinker Dashboard'),
-        backgroundColor: const Color(0xFFB71C1C),
+        backgroundColor: Constants.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -124,7 +128,7 @@ class HomePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
       decoration: const BoxDecoration(
-        color: Color(0xFFB71C1C),
+        color: Constants.primaryColor,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -139,34 +143,75 @@ class HomePage extends StatelessWidget {
                 backgroundColor: Colors.white,
                 child: Text(
                   // Use the helper function here
-                  _getDisplayBloodGroup(user?.bloodType.name),
+                  _getDisplayBloodGroup(user?.bloodType),
                   style: const TextStyle(
-                    color: Color(0xFFB71C1C),
+                    color: Constants.primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                   ),
                 ),
               ),
               const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Hello, ${user?.name ?? 'User'}",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hello, ${user?.name ?? 'User'}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    "Donate Life, Save Lives.",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
+                    Text(
+                      "Donate Blood, Save Lives.",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                    if (user?.lastDonationDate != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Last donation: ${_formatLastDonationDate(user!.lastDonationDate!)}",
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "No donation recorded",
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -183,13 +228,13 @@ class HomePage extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.add_alert, color: Color(0xFFB71C1C)),
+              icon: const Icon(Icons.add_alert, color: Constants.primaryColor),
               label: const Text(
                 'Request Blood',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFB71C1C),
+                  color: Constants.primaryColor,
                 ),
               ),
               style: ElevatedButton.styleFrom(
@@ -230,7 +275,7 @@ class HomePage extends StatelessWidget {
                   child: Text(
                     data['bloodGroup'] ?? 'Unknown',
                     style: const TextStyle(
-                      color: Color(0xFFB71C1C),
+                      color: Constants.primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -295,7 +340,11 @@ class HomePage extends StatelessWidget {
                     try {
                       await launchUrl(launchUri);
                     } catch (e) {
-                      print("Error: $e"); // Prints error to console if it fails
+                      if (kDebugMode) {
+                        debugPrint(
+                          "Error: $e",
+                        ); // Prints error to console if it fails
+                      }
                     }
                   }
                 },
@@ -305,7 +354,7 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB71C1C),
+                  backgroundColor: Constants.primaryColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -332,19 +381,48 @@ class HomePage extends StatelessWidget {
     return 'Recently';
   }
 
-  // Helper to convert "bPositive" -> "B+"
-  String _getDisplayBloodGroup(String? bloodTypeEnumName) {
-    if (bloodTypeEnumName == null) return "N/A";
+  // Helper to display blood type (already in A+ format)
+  String _getDisplayBloodGroup(String? bloodType) {
+    if (bloodType == null || bloodType.isEmpty) return "N/A";
 
-    String clean = bloodTypeEnumName.toLowerCase();
-    String sign = clean.contains('positive') ? '+' : '-';
+    // Blood type is already in A+ format, just return it
+    // Handle legacy formats if any exist in database
+    if (bloodType.contains('(+ve)')) {
+      return bloodType.replaceAll(' (+ve)', '+');
+    } else if (bloodType.contains('(-ve)')) {
+      return bloodType.replaceAll(' (-ve)', '-');
+    } else if (bloodType.toLowerCase().contains('positive') ||
+        bloodType.toLowerCase().contains('negative')) {
+      // Fallback for old "A Positive" format
+      String clean = bloodType.toLowerCase();
+      String sign = clean.contains('positive') ? '+' : '-';
+      String type = clean
+          .replaceAll('positive', '')
+          .replaceAll('negative', '')
+          .trim()
+          .toUpperCase();
+      return '$type$sign';
+    }
 
-    // Remove 'positive'/'negative' to get just A, B, AB, O
-    String type = clean
-        .replaceAll('positive', '')
-        .replaceAll('negative', '')
-        .toUpperCase();
+    return bloodType;
+  }
 
-    return '$type$sign';
+  // Helper to format last donation date
+  String _formatLastDonationDate(DateTime date) {
+    final difference = DateTime.now().difference(date);
+
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 30) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return months == 1 ? '1 month ago' : '$months months ago';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return years == 1 ? '1 year ago' : '$years years ago';
+    }
   }
 }

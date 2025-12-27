@@ -1,8 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:blood_linker/models/user.dart';
-import 'package:blood_linker/models/blood_type.dart';
 import 'package:flutter/foundation.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:blood_linker/models/user.dart';
 
 class AuthManager extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -77,7 +78,7 @@ class AuthManager extends ChangeNotifier {
     String password, {
     String? name,
     String? phone,
-    String? bloodType,
+    required String bloodType,
   }) async {
     try {
       _isLoading = true;
@@ -90,15 +91,12 @@ class AuthManager extends ChangeNotifier {
       );
 
       // Create a standard CustomUser object
-      // Defaulting userType to 'donor' since selection was removed,
-      // or you can use 'user' if your model supports it.
       CustomUser customUser = CustomUser(
         userId: userCredential.user!.uid,
         name: name ?? '',
         email: email,
         phone: phone ?? '',
-        bloodType: _parseBloodType(bloodType ?? 'oPositive'),
-        userType: 'donor', // Defaulting to donor as the standard type
+        bloodType: bloodType,
       );
 
       // Save to Firestore
@@ -129,30 +127,11 @@ class AuthManager extends ChangeNotifier {
     try {
       final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
-        final data = doc.data()!;
-        // Since we simplified registration, we likely just use the basic factory
-        // But keeping the check ensures backward compatibility if you had old data
-        final userType = data['userType'] ?? 'donor';
-
-        if (userType == 'donor') {
-          // If you still have the specialized factory, use it, otherwise use basic
-          // Assuming CustomUser.fromFirestore handles basic fields correctly
-          _customUser = CustomUser.fromFirestore(doc);
-        } else {
-          _customUser = CustomUser.fromFirestore(doc);
-        }
+        _customUser = CustomUser.fromFirestore(doc);
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
     }
-  }
-
-  // Parse blood type string to enum
-  BloodType _parseBloodType(String bloodType) {
-    return BloodType.values.firstWhere(
-      (bt) => bt.name.toLowerCase() == bloodType.toLowerCase(),
-      orElse: () => BloodType.oPositive,
-    );
   }
 
   // Logout
@@ -180,6 +159,8 @@ class AuthManager extends ChangeNotifier {
         return 'No user found with this email.';
       case 'wrong-password':
         return 'Wrong password provided.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
       case 'email-already-in-use':
         return 'An account already exists with this email.';
       case 'invalid-email':

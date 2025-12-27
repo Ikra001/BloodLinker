@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
+
+import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/login_page.dart';
 import 'package:blood_linker/pages/register_page.dart';
-import 'package:flutter/material.dart';
 
 class WelcomePage extends StatelessWidget {
   static const route = '/welcome';
@@ -16,17 +18,14 @@ class WelcomePage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFB71C1C), // dark red
-              Color(0xFFE57373), // light red
-            ],
+            colors: [Constants.primaryColor, Constants.secondaryColor],
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'BloodLinker',
+            Text(
+              Constants.appName,
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -35,7 +34,6 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-
             SizedBox(
               width: 220,
               height: 50,
@@ -45,7 +43,7 @@ class WelcomePage extends StatelessWidget {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: Colors.red.shade700,
+                  foregroundColor: Constants.primaryColor,
                   elevation: 6,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -54,9 +52,7 @@ class WelcomePage extends StatelessWidget {
                 child: const Text('Login', style: TextStyle(fontSize: 18)),
               ),
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               width: 220,
               height: 50,
