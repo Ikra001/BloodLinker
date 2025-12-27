@@ -91,16 +91,17 @@ class _LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Constants.primaryColor,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Uses the Blood Icon (or your Logo if you added it)
-            const Icon(Icons.bloodtype, size: 80, color: Colors.white),
-            const SizedBox(height: 20),
-            // A white spinner looks clean on the red background
-            const CircularProgressIndicator(color: Colors.white),
+            Image.asset(
+              'assets/logo.png',
+              width: 140,
+            ),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(),
           ],
         ),
       ),
