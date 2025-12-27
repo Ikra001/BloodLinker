@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:blood_linker/pages/request_blood_page.dart'; // <--- IMPORT THIS
 
 class MyRequestsPage extends StatelessWidget {
   const MyRequestsPage({super.key});
@@ -22,11 +23,7 @@ class MyRequestsPage extends StatelessWidget {
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('requests')
-                  .where(
-                    'userId',
-                    isEqualTo: user.uid,
-                  ) // <--- Filters for YOUR data
-                  // .orderBy('requestDate', descending: true) // Note: Needs Index (see below)
+                  .where('userId', isEqualTo: user.uid) // Filters for YOUR data
                   .snapshots(),
               builder: (context, snapshot) {
                 // Loading State
@@ -102,11 +99,38 @@ class MyRequestsPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                // DELETE BUTTON
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _confirmDelete(context, docId),
+
+                // --- CHANGED SECTION: ACTION BUTTONS ---
+                Row(
+                  children: [
+                    // 1. EDIT BUTTON (Blue Pencil)
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      tooltip: 'Edit Request',
+                      onPressed: () {
+                        // Navigate to Request Page in "Edit Mode"
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RequestBloodPage(
+                              requestId: docId, // Pass ID so it knows to UPDATE
+                              initialData:
+                                  data, // Pass Data so it fills the form
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // 2. DELETE BUTTON (Red Trash Can)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'Delete Request',
+                      onPressed: () => _confirmDelete(context, docId),
+                    ),
+                  ],
                 ),
+                // ---------------------------------------
               ],
             ),
             const SizedBox(height: 10),

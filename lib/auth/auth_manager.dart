@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:blood_linker/models/user.dart';
 import 'package:blood_linker/utils/logger.dart';
 
@@ -15,7 +13,6 @@ class AuthManager extends ChangeNotifier {
   String? _errorMessage;
 
   AuthManager() {
-    // Listen to auth state changes
     _auth.authStateChanges().listen((User? user) async {
       _user = user;
       if (user != null) {
@@ -34,20 +31,17 @@ class AuthManager extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
-  // Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  // Helper method to set loading state and error
   void _setLoading(bool loading, {String? error}) {
     _isLoading = loading;
     _errorMessage = error;
     notifyListeners();
   }
 
-  // Sign in with email and password
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
     _setLoading(true);
     try {
@@ -55,27 +49,20 @@ class AuthManager extends ChangeNotifier {
         email: email,
         password: password,
       );
-
-      // Load user data from Firestore
       if (userCredential.user != null) {
         await _loadUserData(userCredential.user!.uid);
       }
-
       _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _setLoading(false, error: _getErrorMessage(e.code));
+      _setLoading(false, error: e.message);
       return false;
     } catch (e) {
-      _setLoading(
-        false,
-        error: 'An unexpected error occurred: ${e.toString()}',
-      );
+      _setLoading(false, error: 'An unexpected error occurred: $e');
       return false;
     }
   }
 
-  // Register with email, password, and basic profile data
   Future<bool> registerWithEmailAndPassword(
     String email,
     String password, {
@@ -90,7 +77,6 @@ class AuthManager extends ChangeNotifier {
         password: password,
       );
 
-      // Create a standard CustomUser object
       final customUser = CustomUser(
         userId: userCredential.user!.uid,
         name: name ?? '',
@@ -99,7 +85,6 @@ class AuthManager extends ChangeNotifier {
         bloodType: bloodType,
       );
 
-      // Save to Firestore
       await _firestore
           .collection('users')
           .doc(userCredential.user!.uid)
@@ -109,18 +94,14 @@ class AuthManager extends ChangeNotifier {
       _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _setLoading(false, error: _getErrorMessage(e.code));
+      _setLoading(false, error: e.message);
       return false;
     } catch (e) {
-      _setLoading(
-        false,
-        error: 'An unexpected error occurred: ${e.toString()}',
-      );
+      _setLoading(false, error: 'An unexpected error occurred: $e');
       return false;
     }
   }
 
-  // Load user data from Firestore
   Future<void> _loadUserData(String userId) async {
     try {
       final doc = await _firestore.collection('users').doc(userId).get();
@@ -132,117 +113,81 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  // Update last donation date
   Future<bool> updateLastDonationDate(DateTime? date) async {
     _setLoading(true);
     try {
       if (_user == null) throw Exception("User not logged in");
-
       final updateData = <String, dynamic>{};
       if (date != null) {
         updateData['lastDonationDate'] = Timestamp.fromDate(date);
       } else {
         updateData['lastDonationDate'] = null;
       }
-
       await _firestore.collection('users').doc(_user!.uid).update(updateData);
-
-      // Reload user data to reflect the change
       await _loadUserData(_user!.uid);
-
       _setLoading(false);
       return true;
     } catch (e) {
-      _setLoading(
-        false,
-        error: 'Failed to update donation date: ${e.toString()}',
-      );
+      _setLoading(false, error: 'Failed to update donation date: $e');
       return false;
     }
   }
 
-  // Logout
   Future<void> logout() async {
     _setLoading(true);
     try {
       await _auth.signOut();
       _setLoading(false);
     } catch (e) {
-      _setLoading(false, error: 'Failed to logout: ${e.toString()}');
+      _setLoading(false, error: 'Failed to logout: $e');
     }
   }
 
-  // Get user-friendly error messages
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No user found with this email.';
-      case 'wrong-password':
-        return 'Wrong password provided.';
-      case 'invalid-credential':
-        return 'Invalid email or password.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'invalid-email':
-        return 'The email address is invalid.';
-      case 'weak-password':
-        return 'The password is too weak.';
-      case 'operation-not-allowed':
-        return 'This operation is not allowed.';
-      case 'user-disabled':
-        return 'This user account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many requests. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your connection.';
-      default:
-        return 'An error occurred: $code';
-    }
-  }
-
-  // Create a new Blood Request
+  // --- UPDATED CREATE FUNCTION ---
   Future<bool> createBloodRequest({
     required String patientName,
     required String bloodGroup,
     required int bagsNeeded,
     required String contactNumber,
+    required String hospitalLocation, // This was missing
+    // New Fields
     int? age,
     String? gender,
     DateTime? whenNeeded,
+    bool isEmergency = false,
+    String? additionalNotes,
+    // Location Fields
     double? latitude,
     double? longitude,
     String? hospitalName,
     String? address,
-    bool isEmergency = false,
-    String? additionalNotes,
   }) async {
     _setLoading(true);
     try {
       if (_user == null) throw Exception("User not logged in");
 
       final requestData = <String, dynamic>{
-        // --- FIXED: Now uses 'userId' to match the MyRequests query ---
-        'userId': _user!.uid,
-        // -----------------------------------------------------------
+        'userId': _user!.uid, // Links request to your "My Requests" page
         'patientName': patientName,
         'bloodGroup': bloodGroup,
         'bagsNeeded': bagsNeeded,
         'contactNumber': contactNumber,
+        'hospitalLocation': hospitalLocation,
         'requestDate': FieldValue.serverTimestamp(),
         'status': 'pending',
+
+        // Save New Fields
+        'age': age,
+        'gender': gender,
         'isEmergency': isEmergency,
+        'additionalNotes': additionalNotes,
       };
 
-      // Add optional fields
-      if (age != null) {
-        requestData['age'] = age;
-      }
-      if (gender != null && gender.isNotEmpty) {
-        requestData['gender'] = gender;
-      }
       if (whenNeeded != null) {
         requestData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
       }
+
+      // Add location data if available
       if (latitude != null && longitude != null) {
         requestData['latitude'] = latitude;
         requestData['longitude'] = longitude;
@@ -253,16 +198,68 @@ class AuthManager extends ChangeNotifier {
       if (address != null && address.isNotEmpty) {
         requestData['address'] = address;
       }
-      if (additionalNotes != null && additionalNotes.isNotEmpty) {
-        requestData['additionalNotes'] = additionalNotes;
-      }
 
       await _firestore.collection('requests').add(requestData);
 
       _setLoading(false);
       return true;
     } catch (e) {
-      _setLoading(false, error: 'Failed to create request: ${e.toString()}');
+      _setLoading(false, error: 'Failed to create request: $e');
+      return false;
+    }
+  }
+
+  // --- UPDATED UPDATE FUNCTION ---
+  Future<bool> updateBloodRequest({
+    required String requestId,
+    required String patientName,
+    required String bloodGroup,
+    required int bagsNeeded,
+    required String contactNumber,
+    required String hospitalLocation,
+    // New Fields needed for Edit Mode
+    int? age,
+    String? gender,
+    DateTime? whenNeeded,
+    bool isEmergency = false,
+    String? additionalNotes,
+    // Location Fields
+    double? latitude,
+    double? longitude,
+    String? hospitalName,
+    String? address,
+  }) async {
+    _setLoading(true);
+    try {
+      final updateData = <String, dynamic>{
+        'patientName': patientName,
+        'bloodGroup': bloodGroup,
+        'bagsNeeded': bagsNeeded,
+        'contactNumber': contactNumber,
+        'hospitalLocation': hospitalLocation,
+        'age': age,
+        'gender': gender,
+        'isEmergency': isEmergency,
+        'additionalNotes': additionalNotes,
+      };
+
+      if (whenNeeded != null) {
+        updateData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
+      }
+
+      if (latitude != null && longitude != null) {
+        updateData['latitude'] = latitude;
+        updateData['longitude'] = longitude;
+      }
+      if (hospitalName != null) updateData['hospitalName'] = hospitalName;
+      if (address != null) updateData['address'] = address;
+
+      await _firestore.collection('requests').doc(requestId).update(updateData);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(false, error: 'Failed to update request: $e');
       return false;
     }
   }
