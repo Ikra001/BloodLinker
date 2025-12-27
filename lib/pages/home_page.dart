@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
+import 'package:blood_linker/pages/request_details_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
 
@@ -106,8 +107,9 @@ class HomePage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
-                    final data = requests[index].data() as Map<String, dynamic>;
-                    return _buildRequestCard(data);
+                    final doc = requests[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    return _buildRequestCard(context, data, doc.id);
                   },
                 );
               },
@@ -250,114 +252,139 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildRequestCard(Map<String, dynamic> data) {
+  Widget _buildRequestCard(
+    BuildContext context,
+    Map<String, dynamic> data,
+    String requestId,
+  ) {
     return Card(
       elevation: 4,
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- TOP ROW: Blood Group & Location ---
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEBEE),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    data['bloodGroup'] ?? 'Unknown',
-                    style: const TextStyle(
-                      color: Constants.primaryColor,
-                      fontWeight: FontWeight.bold,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  RequestDetailsPage(requestData: data, requestId: requestId),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- TOP ROW: Blood Group & Location ---
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      data['bloodGroup'] ?? 'Unknown',
+                      style: const TextStyle(
+                        color: Constants.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    data['hospitalLocation'] ?? 'Unknown Location',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      data['hospitalName'] ??
+                          data['address'] ??
+                          'Unknown Location',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-            // --- MIDDLE ROW: Patient Name & Bags ---
-            Row(
-              children: [
-                const Icon(Icons.person, size: 16, color: Colors.grey),
-                const SizedBox(width: 5),
-                Text("Patient: ${data['patientName'] ?? 'N/A'}"),
-                const Spacer(),
-                const Icon(Icons.local_hospital, size: 16, color: Colors.grey),
-                const SizedBox(width: 5),
-                Text("${data['bagsNeeded']} Bags"),
-              ],
-            ),
+              // --- MIDDLE ROW: Patient Name & Bags ---
+              Row(
+                children: [
+                  const Icon(Icons.person, size: 16, color: Colors.grey),
+                  const SizedBox(width: 5),
+                  Text("Patient: ${data['patientName'] ?? 'N/A'}"),
+                  const Spacer(),
+                  const Icon(
+                    Icons.local_hospital,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 5),
+                  Text("${data['bagsNeeded']} Bags"),
+                ],
+              ),
 
-            // --- TIME ROW (ADDED HERE) ---
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  "Posted: ${_formatTimestamp(data['requestDate'])}",
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
+              // --- TIME ROW (ADDED HERE) ---
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Posted: ${_formatTimestamp(data['requestDate'])}",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
 
-            // --- BOTTOM ROW: The Call Button (FIXED) ---
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  // 1. Get the number
-                  String phoneNumber = data['contactNumber'] ?? '';
+              // --- BOTTOM ROW: The Call Button (FIXED) ---
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    // 1. Get the number
+                    String phoneNumber = data['contactNumber'] ?? '';
 
-                  // 2. Simple check: Is there a number?
-                  if (phoneNumber.isNotEmpty) {
-                    // 3. Create the command to open the dialer
-                    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+                    // 2. Simple check: Is there a number?
+                    if (phoneNumber.isNotEmpty) {
+                      // 3. Create the command to open the dialer
+                      final Uri launchUri = Uri(
+                        scheme: 'tel',
+                        path: phoneNumber,
+                      );
 
-                    // 4. FORCE open the dialer (we removed the 'if' check)
-                    try {
-                      await launchUrl(launchUri);
-                    } catch (e) {
-                      AppLogger.error('Error launching phone dialer', e);
+                      // 4. FORCE open the dialer (we removed the 'if' check)
+                      try {
+                        await launchUrl(launchUri);
+                      } catch (e) {
+                        AppLogger.error('Error launching phone dialer', e);
+                      }
                     }
-                  }
-                },
-                icon: const Icon(Icons.phone, color: Colors.white, size: 18),
-                label: const Text(
-                  "Call to Donate",
-                  style: TextStyle(color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Constants.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  },
+                  icon: const Icon(Icons.phone, color: Colors.white, size: 18),
+                  label: const Text(
+                    "Call to Donate",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Constants.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
