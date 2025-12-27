@@ -35,7 +35,7 @@ class _LastDonationPageState extends State<LastDonationPage> {
 
   Future<void> _saveLastDonationDate(DateTime? date) async {
     final authManager = Provider.of<AuthManager>(context, listen: false);
-    
+
     final success = await authManager.updateLastDonationDate(date);
 
     if (!mounted) return;
@@ -46,9 +46,9 @@ class _LastDonationPageState extends State<LastDonationPage> {
         (route) => false,
       );
     } else if (authManager.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authManager.errorMessage!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(authManager.errorMessage!)));
     }
   }
 
@@ -217,4 +217,3 @@ class _LastDonationPageState extends State<LastDonationPage> {
     );
   }
 }
-
