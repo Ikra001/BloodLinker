@@ -15,7 +15,6 @@
 - [Technical Architecture](#technical-architecture)
 - [Tech Stack](#tech-stack)
 - [Installation & Setup](#installation--setup)
-- [Contributors](#contributors)
 
 ---
 
@@ -63,8 +62,6 @@ Unlike traditional directories, BloodLinker features a **Live Dashboard** that u
 |                   **Onboarding**                   |                **Home Feed**                 |                **Donor Details**                |               **Request Map**               |
 | :------------------------------------------------: | :------------------------------------------: | :---------------------------------------------: | :-----------------------------------------: |
 | <img src="screenshots/onboarding.jpg" width="200"> | <img src="screenshots/home.jpg" width="200"> | <img src="screenshots/details.jpg" width="200"> | <img src="screenshots/map.jpg" width="200"> |
-
-_(Note: These screenshots demonstrate the new elegant UI, the filtered dashboard, the detailed workflow, and the location services.)_
 
 ## 🏗️ Technical Architecture
 
