@@ -59,7 +59,7 @@ Unlike traditional directories, BloodLinker features a **Live Dashboard** that u
 
 ## Screenshots
 
-|                   **Onboarding**                   |                **Home Feed**                 |                **Donor Details**                |               **Request Map**               |
+|                   **Onboarding**                   |                **Home Feed**                 |                **Patient Details**                |               **Request Map**               |
 | :------------------------------------------------: | :------------------------------------------: | :---------------------------------------------: | :-----------------------------------------: |
 | <img src="screenshots/onboarding.jpg" width="200"> | <img src="screenshots/home.jpg" width="200"> | <img src="screenshots/details.jpg" width="200"> | <img src="screenshots/map.jpg" width="200"> |
 
@@ -95,6 +95,12 @@ This project is configured for immediate demonstration purposes.
 ### 2. Clone the Repository
 
 ```bash
-git clone [https://github.com/your-username/BloodLinker.git](https://github.com/your-username/BloodLinker.git)
+git clone https://github.com/Ikra001/BloodLinker.git
 cd BloodLinker
+```
+
+### 3. Run the app
+
+```bash
+flutter run
 ```
