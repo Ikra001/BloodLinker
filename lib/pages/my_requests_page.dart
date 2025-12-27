@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:blood_linker/pages/request_blood_page.dart'; // <--- IMPORT THIS
+import 'package:blood_linker/pages/request_blood_page.dart';
+import 'package:blood_linker/pages/request_details_page.dart'; // <--- Import Details Page
 
 class MyRequestsPage extends StatelessWidget {
   const MyRequestsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 1. Get the current logged-in user's ID
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
@@ -23,15 +23,13 @@ class MyRequestsPage extends StatelessWidget {
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('requests')
-                  .where('userId', isEqualTo: user.uid) // Filters for YOUR data
+                  .where('userId', isEqualTo: user.uid)
                   .snapshots(),
               builder: (context, snapshot) {
-                // Loading State
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // Empty State
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
                     child: Column(
@@ -48,7 +46,6 @@ class MyRequestsPage extends StatelessWidget {
                   );
                 }
 
-                // Data List
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: snapshot.data!.docs.length,
@@ -73,88 +70,112 @@ class MyRequestsPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Blood Group Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEBEE),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    data['bloodGroup'] ?? 'N/A',
-                    style: const TextStyle(
-                      color: Color(0xFFB71C1C),
-                      fontWeight: FontWeight.bold,
+      clipBehavior: Clip.antiAlias, // Important for ripple effect
+      child: InkWell(
+        // --- 1. CLICKING THE CARD OPENS DETAILS ---
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  RequestDetailsPage(requestId: docId, requestData: data),
+            ),
+          );
+        },
+        // ------------------------------------------
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Blood Group Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      data['bloodGroup'] ?? 'N/A',
+                      style: const TextStyle(
+                        color: Color(0xFFB71C1C),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
 
-                // --- CHANGED SECTION: ACTION BUTTONS ---
-                Row(
-                  children: [
-                    // 1. EDIT BUTTON (Blue Pencil)
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      tooltip: 'Edit Request',
-                      onPressed: () {
-                        // Navigate to Request Page in "Edit Mode"
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RequestBloodPage(
-                              requestId: docId, // Pass ID so it knows to UPDATE
-                              initialData:
-                                  data, // Pass Data so it fills the form
+                  // --- 2. ACTION BUTTONS STAY SEPARATE ---
+                  Row(
+                    children: [
+                      // EDIT BUTTON
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        tooltip: 'Edit Request',
+                        onPressed: () {
+                          // Opens Edit Page (Not Details)
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RequestBloodPage(
+                                requestId: docId,
+                                initialData: data,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
 
-                    // 2. DELETE BUTTON (Red Trash Can)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      tooltip: 'Delete Request',
-                      onPressed: () => _confirmDelete(context, docId),
-                    ),
-                  ],
+                      // DELETE BUTTON
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        tooltip: 'Delete Request',
+                        onPressed: () => _confirmDelete(context, docId),
+                      ),
+                    ],
+                  ),
+                  // ---------------------------------------
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Patient: ${data['patientName'] ?? 'Unknown'}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-                // ---------------------------------------
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              "Patient: ${data['patientName'] ?? 'Unknown'}",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              "Location: ${data['hospitalLocation'] ?? 'Unknown'}",
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              "Bags: ${data['bagsNeeded']}",
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "Location: ${data['hospitalLocation'] ?? 'Unknown'}",
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                "Bags: ${data['bagsNeeded']}",
+                style: const TextStyle(color: Colors.grey),
+              ),
+              // Optional: Add a visual cue that it's clickable
+              const SizedBox(height: 8),
+              Text(
+                "Tap to view details",
+                style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper to show "Are you sure?" dialog
   void _confirmDelete(BuildContext context, String docId) {
     showDialog(
       context: context,
@@ -170,8 +191,7 @@ class MyRequestsPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(ctx); // Close dialog
-              // Perform Delete
+              Navigator.pop(ctx);
               await FirebaseFirestore.instance
                   .collection('requests')
                   .doc(docId)
