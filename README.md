@@ -4,7 +4,10 @@
 
 **BloodLinker** is a sophisticated, life-saving mobile application designed to bridge the gap between blood donors and patients in real-time. By removing middlemen and utilizing live data streams, it ensures critical requests are seen, shared, and acted upon instantly.
 
----
+## Try it out
+
+Download and install [BloodLinker.v1.0.0.apk](https://github.com/Ikra001/BloodLinker/releases/download/v1.0.0/BloodLinker.v1.0.0.apk) (53.6 MB)
+
 
 ## Table of Contents
 
@@ -61,7 +64,7 @@ Unlike traditional directories, BloodLinker features a **Live Dashboard** that u
 
 |                   **Onboarding**                   |                **Home Feed**                 |                **Patient Details**                |               **Request Map**               |
 | :------------------------------------------------: | :------------------------------------------: | :---------------------------------------------: | :-----------------------------------------: |
-| <img src="screenshots/onboarding.jpg" width="200"> | <img src="screenshots/home.jpg" width="200"> | <img src="screenshots/details.jpg" width="200"> | <img src="screenshots/map.jpg" width="200"> |
+| <img src="screenshots/onboarding.png" width="200"> | <img src="screenshots/home.png" width="200"> | <img src="screenshots/details.png" width="200"> | <img src="screenshots/map.png" width="200"> |
 
 ## Technical Architecture
 
@@ -84,8 +87,6 @@ The app operates on a custom **Reactive Pipeline** architecture:
 - **Utilities:** `url_launcher` (intents), `intl` (formatting), `share_plus` (sharing)
 
 ## Installation & Setup
-
-This project is configured for immediate demonstration purposes.
 
 ### 1. Prerequisites
 
