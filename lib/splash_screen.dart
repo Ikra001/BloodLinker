@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:blood_linker/pages/welcome_page.dart';
 
 import 'package:blood_linker/main.dart';
 
