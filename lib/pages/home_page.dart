@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/request_details_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
@@ -90,11 +91,11 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFF5F7FA),
       body: Column(
         children: [
-          _buildModernHeader(context),
+          _buildHeader(context),
 
           // FILTER SECTION
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 25, 0, 15),
+            padding: const EdgeInsets.fromLTRB(20, 20, 0, 15),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -126,38 +127,30 @@ class _HomePageState extends State<HomePage> {
                               });
                             }
                           },
-                          // --- UPDATED COLORS FOR CONSISTENCY ---
-                          // 1. Use the specific "Elegant Red" used in header/buttons
                           selectedColor: const Color(0xFFD32F2F),
                           backgroundColor: Colors.white,
-                          checkmarkColor: Colors.white, // Tick is White
-                          // 2. Softer Text Colors
+                          checkmarkColor: Colors.white,
                           labelStyle: TextStyle(
                             color: isSelected ? Colors.white : Colors.grey[600],
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w500,
-                            fontSize: 14,
+                            fontSize: 15,
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 8,
+                            vertical: 10,
                           ),
-
-                          // 3. Cleaner Shape (No border when selected)
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(50),
                             side: BorderSide(
                               color: isSelected
-                                  ? Colors
-                                        .transparent // No border on selected (Clean look)
-                                  : Colors.grey.withOpacity(
-                                      0.2,
-                                    ), // Very soft border on unselected
+                                  ? Colors.transparent
+                                  : Colors.grey.withOpacity(0.2),
                               width: 1,
                             ),
                           ),
-                          elevation: isSelected ? 4 : 0,
+                          elevation: isSelected ? 2 : 0,
                           shadowColor: const Color(0xFFD32F2F).withOpacity(0.4),
                         ),
                       );
@@ -210,7 +203,7 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final doc = requests[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    return _buildElegantRequestCard(context, data, doc.id);
+                    return _buildRequestCard(context, data, doc.id);
                   },
                 );
               },
@@ -222,7 +215,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- HEADER WIDGET ---
-  Widget _buildModernHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
 
@@ -249,6 +242,7 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         children: [
+          // Row 1: Title and Actions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -291,7 +285,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 35),
+
+          const SizedBox(height: 30),
+
+          // Row 2: Avatar + Name
           Row(
             children: [
               Container(
@@ -374,10 +371,13 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 30),
+
+          const SizedBox(height: 25),
+
+          // Row 3: Request Button
           SizedBox(
             width: double.infinity,
-            height: 58,
+            height: 55,
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
@@ -421,6 +421,8 @@ class _HomePageState extends State<HomePage> {
     return IconButton(
       onPressed: onTap,
       icon: Icon(icon, color: Colors.white, size: 26),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
       style: IconButton.styleFrom(
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -428,7 +430,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- CARD WIDGET ---
-  Widget _buildElegantRequestCard(
+  Widget _buildRequestCard(
     BuildContext context,
     Map<String, dynamic> data,
     String requestId,
@@ -468,6 +470,7 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Blood Group Box
                     Container(
                       height: 52,
                       width: 52,
@@ -514,7 +517,7 @@ class _HomePageState extends State<HomePage> {
                                   children: [
                                     Icon(
                                       Icons.person_rounded,
-                                      size: 15,
+                                      size: 16,
                                       color: Colors.grey[600],
                                     ),
                                     const SizedBox(width: 6),
@@ -546,7 +549,7 @@ class _HomePageState extends State<HomePage> {
                                   children: [
                                     Icon(
                                       Icons.local_hospital_rounded,
-                                      size: 13,
+                                      size: 14,
                                       color: Colors.grey[700],
                                     ),
                                     const SizedBox(width: 5),
@@ -564,13 +567,12 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
 
-                          const SizedBox(height: 8),
-
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               Icon(
                                 Icons.access_time_rounded,
-                                size: 13,
+                                size: 14,
                                 color: Colors.grey[500],
                               ),
                               const SizedBox(width: 4),
@@ -589,7 +591,10 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 22),
+
+                const SizedBox(height: 20),
+
+                // Call Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -611,23 +616,23 @@ class _HomePageState extends State<HomePage> {
                     icon: const Icon(
                       Icons.phone_in_talk_rounded,
                       color: Colors.white,
-                      size: 19,
+                      size: 20,
                     ),
                     label: const Text(
                       "Call to Donate",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        letterSpacing: 0.3,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD32F2F),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      elevation: 3,
+                      elevation: 4,
                       shadowColor: const Color(0xFFD32F2F).withOpacity(0.4),
                     ),
                   ),
@@ -671,6 +676,7 @@ class _HomePageState extends State<HomePage> {
     return bloodType;
   }
 
+  // --- FIXED: Shows FULL words instead of abbreviations ---
   String _formatLastDonationDate(DateTime date) {
     final difference = DateTime.now().difference(date);
     if (difference.inDays == 0) {
@@ -681,9 +687,11 @@ class _HomePageState extends State<HomePage> {
       return '${difference.inDays} days ago';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
+      // Changed "mos" to "months"
       return months == 1 ? '1 month ago' : '$months months ago';
     } else {
       final years = (difference.inDays / 365).floor();
+      // Changed "yr" to "year"
       return years == 1 ? '1 year ago' : '$years years ago';
     }
   }
