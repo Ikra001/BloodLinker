@@ -38,6 +38,7 @@ class _MapLocationPageState extends State<MapLocationPage>
   bool _isLoadingLocation = false;
   bool _isLoadingLocationName = false;
   bool _mapIsReady = false;
+  String? _networkError;
 
   Timer? _searchDebounceTimer;
   String _lastSearchQuery = '';
@@ -113,7 +114,7 @@ class _MapLocationPageState extends State<MapLocationPage>
       AppLogger.log(
         'Initializing map with location: ${point.latitude}, ${point.longitude}',
       );
-      await controller.goToLocation(point);
+      await controller.moveTo(point);
       await _addCurrentLocationMarker(point);
       await _loadNearbyHospitals(point);
       AppLogger.log('Map initialization complete');
@@ -171,6 +172,14 @@ class _MapLocationPageState extends State<MapLocationPage>
           }
         }
       }
+    } on SocketException catch (e) {
+      AppLogger.error('Error loading nearby hospitals - Network error', e);
+      if (mounted) {
+        setState(() {
+          _networkError =
+              'No internet connection. Nearby hospitals cannot be loaded.';
+        });
+      }
     } catch (e) {
       AppLogger.error('Error loading nearby hospitals', e);
     }
@@ -213,6 +222,13 @@ class _MapLocationPageState extends State<MapLocationPage>
         try {
           AppLogger.log('Searching for hospitals: $currentQuery');
 
+          // Clear previous network error
+          if (mounted) {
+            setState(() {
+              _networkError = null;
+            });
+          }
+
           final results = await PlacesService.searchHospitalsByName(
             currentQuery,
             _currentPosition?.latitude,
@@ -229,6 +245,17 @@ class _MapLocationPageState extends State<MapLocationPage>
             setState(() {
               _hospitalResults = sortedResults;
               _isSearching = false;
+              _networkError = null;
+            });
+          }
+        } on SocketException catch (e) {
+          AppLogger.error('Error searching hospitals - Network error', e);
+          if (mounted && _searchController.text.trim() == currentQuery) {
+            setState(() {
+              _hospitalResults = [];
+              _isSearching = false;
+              _networkError =
+                  'No internet connection. Please check your network and try again.';
             });
           }
         } catch (e) {
@@ -237,6 +264,7 @@ class _MapLocationPageState extends State<MapLocationPage>
             setState(() {
               _hospitalResults = [];
               _isSearching = false;
+              _networkError = 'Failed to search hospitals. Please try again.';
             });
           }
         }
@@ -252,7 +280,7 @@ class _MapLocationPageState extends State<MapLocationPage>
     if (hospital.lat != null && hospital.lon != null) {
       final point = GeoPoint(latitude: hospital.lat!, longitude: hospital.lon!);
       await _setSelectedLocation(point, hospital, hospital.name);
-      await controller.goToLocation(point);
+      await controller.moveTo(point);
       _searchController.clear();
       _searchFocusNode.unfocus();
       setState(() {
@@ -577,7 +605,7 @@ class _MapLocationPageState extends State<MapLocationPage>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     spreadRadius: 1,
                     blurRadius: 5,
                     offset: const Offset(0, 3),
@@ -613,6 +641,49 @@ class _MapLocationPageState extends State<MapLocationPage>
                       contentPadding: const EdgeInsets.all(16),
                     ),
                   ),
+                  if (_networkError != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.wifi_off,
+                            color: Colors.red.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _networkError!,
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            color: Colors.red.shade700,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() {
+                                _networkError = null;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   if (_hospitalResults.isNotEmpty)
                     Container(
                       constraints: const BoxConstraints(maxHeight: 200),
