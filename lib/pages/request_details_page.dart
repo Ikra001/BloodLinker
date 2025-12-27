@@ -29,6 +29,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   String? _requesterName;
   bool _isUserReserved = false;
   bool _isInitialLoading = true;
+  DateTime? _userLastDonationDate;
 
   Future<void> _makeCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) {
@@ -229,13 +230,46 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     return bloodType.trim();
   }
 
-  bool _isEligible(String? userBloodType, String patientBloodGroup) {
+  bool _isEligible(
+    String? userBloodType,
+    String patientBloodGroup,
+    dynamic whenNeeded,
+    DateTime? userLastDonationDate,
+  ) {
+    // Check blood group match
     if (userBloodType == null || userBloodType.isEmpty) return false;
 
     final normalizedUser = _normalizeBloodGroup(userBloodType);
     final normalizedPatient = _normalizeBloodGroup(patientBloodGroup);
 
-    return normalizedUser == normalizedPatient;
+    if (normalizedUser != normalizedPatient) return false;
+
+    // Check 3-month rule: whenNeeded - lastDonationDate >= 3 months
+    // If lastDonationDate is null, consider user never donated, so they pass the check
+    if (userLastDonationDate == null) {
+      return true; // Never donated, eligible
+    }
+
+    // If whenNeeded is not specified, consider them eligible (can't check the rule)
+    if (whenNeeded == null) {
+      return true;
+    }
+
+    DateTime whenNeededDate;
+    if (whenNeeded is Timestamp) {
+      whenNeededDate = whenNeeded.toDate();
+    } else if (whenNeeded is DateTime) {
+      whenNeededDate = whenNeeded;
+    } else {
+      return true; // Can't parse whenNeeded, consider eligible
+    }
+
+    // Calculate the difference
+    final difference = whenNeededDate.difference(userLastDonationDate);
+
+    // Check if at least 3 months (approximately 90 days) have passed
+    // Using 90 days as an approximation for 3 months
+    return difference.inDays >= 90;
   }
 
   Future<void> _handleInterested() async {
@@ -407,12 +441,42 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       _checkIfInterested(),
       _loadRequesterName(),
       _checkIfUserReserved(),
+      _loadUserLastDonationDate(),
     ]);
 
     if (mounted) {
       setState(() {
         _isInitialLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadUserLastDonationDate() async {
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    final user = authManager.user;
+
+    if (user == null) return;
+
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final data = userDoc.data();
+      final lastDonationDate = data?['lastDonationDate'];
+
+      if (mounted) {
+        setState(() {
+          if (lastDonationDate != null && lastDonationDate is Timestamp) {
+            _userLastDonationDate = lastDonationDate.toDate();
+          } else {
+            _userLastDonationDate = null;
+          }
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Error loading user last donation date', e);
     }
   }
 
@@ -858,7 +922,12 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     final isEmergency = widget.requestData['isEmergency'] as bool? ?? false;
     final additionalNotes = widget.requestData['additionalNotes'] as String?;
 
-    final isEligible = _isEligible(user?.bloodType, bloodGroup);
+    final isEligible = _isEligible(
+      user?.bloodType,
+      bloodGroup,
+      whenNeeded,
+      _userLastDonationDate,
+    );
 
     return Scaffold(
       appBar: AppBar(
