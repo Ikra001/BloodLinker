@@ -28,6 +28,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   bool _isLoading = false;
   String? _requesterName;
   bool _isUserReserved = false;
+  bool _isInitialLoading = true;
 
   Future<void> _makeCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) {
@@ -396,10 +397,23 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     super.initState();
     // Check if user is already interested and load requester name
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkIfInterested();
-      _loadRequesterName();
-      _checkIfUserReserved();
+      _loadInitialData();
     });
+  }
+
+  Future<void> _loadInitialData() async {
+    // Load all initial data in parallel
+    await Future.wait([
+      _checkIfInterested(),
+      _loadRequesterName(),
+      _checkIfUserReserved(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _isInitialLoading = false;
+      });
+    }
   }
 
   Future<void> _checkIfUserReserved() async {
@@ -759,344 +773,233 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         backgroundColor: Constants.primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Patient Details
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.person, color: Constants.primaryColor),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Patient Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        // Blood Group Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 255, 214, 220),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            bloodGroup,
-                            style: const TextStyle(
-                              color: Constants.primaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ],
+      body: _isInitialLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Patient Details
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    // Relative time subtitle
-                    if (_formatRelativeTime(requestDate).isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 32),
-                        child: Builder(
-                          builder: (context) {
-                            final requestUserId =
-                                widget.requestData['userId'] as String?;
-                            final currentUserId = authManager.user?.uid;
-                            final isCurrentUser =
-                                requestUserId != null &&
-                                currentUserId != null &&
-                                requestUserId == currentUserId;
-
-                            final postedText = isCurrentUser
-                                ? "Posted ${_formatRelativeTime(requestDate)} by you"
-                                : _requesterName != null
-                                ? "Posted ${_formatRelativeTime(requestDate)} by $_requesterName"
-                                : "Posted ${_formatRelativeTime(requestDate)}";
-
-                            return Text(
-                              postedText,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                                fontStyle: FontStyle.italic,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    if (isEmergency)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.red[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red, width: 2),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.warning,
-                              color: Colors.red[700],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'EMERGENCY',
-                              style: TextStyle(
-                                color: Colors.red[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    // Eligibility Chip
-                    if (isEligible)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green, width: 2),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.green[700],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "You're Eligible",
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange, width: 2),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.cancel_outlined,
-                              color: Colors.orange[700],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Not Eligible',
-                              style: TextStyle(
-                                color: Colors.orange[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    _buildInfoRow('Patient Name', patientName),
-                    if (age != null) ...[
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Age', '$age years'),
-                    ],
-                    if (gender != null) ...[
-                      const SizedBox(height: 8),
-                      _buildInfoRow('Gender', gender),
-                    ],
-                    const SizedBox(height: 8),
-                    _buildInfoRow('Bags Needed', '$bagsNeeded'),
-                    if (whenNeeded != null) ...[
-                      const SizedBox(height: 8),
-                      _buildInfoRow(
-                        'When Needed',
-                        _formatWhenNeeded(whenNeeded),
-                      ),
-                    ],
-                    // Share Button (shown for both eligible and not eligible)
-                    if (isEligible) const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _handleShare,
-                        icon: const Icon(Icons.share, color: Colors.white),
-                        label: const Text(
-                          'Share Request',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[700],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Call Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: contactNumber.isNotEmpty
-                            ? () => _makeCall(contactNumber)
-                            : null,
-                        icon: const Icon(Icons.phone, color: Colors.white),
-                        label: const Text(
-                          'Call',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Constants.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Edit/Delete buttons (shown if current user is requester) or Interested button (shown if eligible and not requester)
-                    Builder(
-                      builder: (context) {
-                        final authManager = Provider.of<AuthManager>(context);
-                        final currentUser = authManager.user;
-                        final requestUserId =
-                            widget.requestData['userId'] as String?;
-                        final isRequester =
-                            currentUser != null &&
-                            requestUserId != null &&
-                            requestUserId == currentUser.uid;
-
-                        if (isRequester) {
-                          // Show Edit and Delete buttons for requester
-                          return Row(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _handleEdit,
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    'Edit Request',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[700],
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
+                              Icon(Icons.person, color: Constants.primaryColor),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Patient Information',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isLoading ? null : _handleDelete,
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
+                              const Spacer(),
+                              // Blood Group Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(
+                                    255,
+                                    255,
+                                    214,
+                                    220,
                                   ),
-                                  label: const Text(
-                                    'Delete Request',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red[700],
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  bloodGroup,
+                                  style: const TextStyle(
+                                    color: Constants.primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
                             ],
-                          );
-                        } else if (isEligible && !_isUserReserved) {
-                          // Show Interested button for eligible users who are not the requester and not already reserved
-                          return SizedBox(
+                          ),
+                          // Relative time subtitle
+                          if (_formatRelativeTime(requestDate).isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 32),
+                              child: Builder(
+                                builder: (context) {
+                                  final requestUserId =
+                                      widget.requestData['userId'] as String?;
+                                  final currentUserId = authManager.user?.uid;
+                                  final isCurrentUser =
+                                      requestUserId != null &&
+                                      currentUserId != null &&
+                                      requestUserId == currentUserId;
+
+                                  final postedText = isCurrentUser
+                                      ? "Posted ${_formatRelativeTime(requestDate)} by you"
+                                      : _requesterName != null
+                                      ? "Posted ${_formatRelativeTime(requestDate)} by $_requesterName"
+                                      : "Posted ${_formatRelativeTime(requestDate)}";
+
+                                  return Text(
+                                    postedText,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          if (isEmergency)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red, width: 2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.warning,
+                                    color: Colors.red[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'EMERGENCY',
+                                    style: TextStyle(
+                                      color: Colors.red[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          // Eligibility Chip
+                          if (isEligible)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "You're Eligible",
+                                    style: TextStyle(
+                                      color: Colors.green[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.cancel_outlined,
+                                    color: Colors.orange[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Not Eligible',
+                                    style: TextStyle(
+                                      color: Colors.orange[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          _buildInfoRow('Patient Name', patientName),
+                          if (age != null) ...[
+                            const SizedBox(height: 8),
+                            _buildInfoRow('Age', '$age years'),
+                          ],
+                          if (gender != null) ...[
+                            const SizedBox(height: 8),
+                            _buildInfoRow('Gender', gender),
+                          ],
+                          const SizedBox(height: 8),
+                          _buildInfoRow('Bags Needed', '$bagsNeeded'),
+                          if (whenNeeded != null) ...[
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                              'When Needed',
+                              _formatWhenNeeded(whenNeeded),
+                            ),
+                          ],
+                          // Share Button (shown for both eligible and not eligible)
+                          if (isEligible) const SizedBox(height: 12),
+                          SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _isLoading ? null : _handleInterested,
-                              icon: _isLoading
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
-                                  : Icon(
-                                      _isInterested
-                                          ? Icons.check
-                                          : Icons.favorite,
-                                      color: Colors.white,
-                                    ),
-                              label: Text(
-                                _isInterested
-                                    ? 'Remove Interest'
-                                    : 'I\'m Interested',
-                                style: const TextStyle(color: Colors.white),
+                              onPressed: _handleShare,
+                              icon: const Icon(
+                                Icons.share,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Share Request',
+                                style: TextStyle(color: Colors.white),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _isInterested
-                                    ? Colors.orange[700]
-                                    : Constants.primaryColor,
+                                backgroundColor: Colors.blue[700],
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
@@ -1105,377 +1008,551 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                 ),
                               ),
                             ),
-                          );
-                        } else {
-                          return const SizedBox.shrink();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Interested Donors List (only shown if current user is the requester)
-            Builder(
-              builder: (context) {
-                final authManager = Provider.of<AuthManager>(context);
-                final currentUser = authManager.user;
-                final requestUserId = widget.requestData['userId'] as String?;
-                final isRequester =
-                    currentUser != null &&
-                    requestUserId != null &&
-                    requestUserId == currentUser.uid;
-
-                if (!isRequester) {
-                  return const SizedBox.shrink();
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.favorite,
-                                  color: Constants.primaryColor,
+                          ),
+                          const SizedBox(height: 12),
+                          // Call Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: contactNumber.isNotEmpty
+                                  ? () => _makeCall(contactNumber)
+                                  : null,
+                              icon: const Icon(
+                                Icons.phone,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Call',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Constants.primaryColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Interested Donors',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            StreamBuilder<DocumentSnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('requests')
-                                  .doc(widget.requestId)
-                                  .snapshots(),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
+                          ),
+                          const SizedBox(height: 16),
+                          // Edit/Delete buttons (shown if current user is requester) or Interested button (shown if eligible and not requester)
+                          Builder(
+                            builder: (context) {
+                              final authManager = Provider.of<AuthManager>(
+                                context,
+                              );
+                              final currentUser = authManager.user;
+                              final requestUserId =
+                                  widget.requestData['userId'] as String?;
+                              final isRequester =
+                                  currentUser != null &&
+                                  requestUserId != null &&
+                                  requestUserId == currentUser.uid;
 
-                                if (!snapshot.hasData) {
-                                  return Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(
-                                      'No donors have shown interest yet.',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                final requestData =
-                                    snapshot.data!.data()
-                                        as Map<String, dynamic>?;
-                                final interestedDonorIds =
-                                    (requestData?['interestedDonors']
-                                        as List<dynamic>?) ??
-                                    [];
-                                final reservedDonorIds =
-                                    (requestData?['reservedDonors']
-                                        as List<dynamic>?) ??
-                                    [];
-
-                                if (interestedDonorIds.isEmpty) {
-                                  return Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(
-                                      'No donors have shown interest yet.',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                return FutureBuilder<
-                                  List<Map<String, dynamic>>
-                                >(
-                                  future: _fetchDonorsData(
-                                    interestedDonorIds,
-                                    reservedDonorIds,
-                                  ),
-                                  builder: (context, donorsSnapshot) {
-                                    if (donorsSnapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(16.0),
-                                          child: CircularProgressIndicator(),
+                              if (isRequester) {
+                                // Show Edit and Delete buttons for requester
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _handleEdit,
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.white,
                                         ),
-                                      );
-                                    }
-
-                                    final donors = donorsSnapshot.data ?? [];
-
-                                    if (donors.isEmpty) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Text(
-                                          'No donors have shown interest yet.',
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 14,
-                                          ),
+                                        label: const Text(
+                                          'Edit Request',
+                                          style: TextStyle(color: Colors.white),
                                         ),
-                                      );
-                                    }
-
-                                    return Column(
-                                      children: donors.map((donor) {
-                                        final isReserved =
-                                            donor['isReserved'] as bool? ??
-                                            false;
-                                        return Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 12,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue[700],
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
                                           ),
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: isReserved
-                                                ? Colors.green[50]
-                                                : Colors.grey[50],
+                                          shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: isReserved
-                                                  ? Colors.green
-                                                  : Colors.grey[300]!,
-                                              width: 1,
+                                              12,
                                             ),
                                           ),
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _handleDelete,
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.white,
+                                        ),
+                                        label: const Text(
+                                          'Delete Request',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red[700],
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              } else if (isEligible && !_isUserReserved) {
+                                // Show Interested button for eligible users who are not the requester and not already reserved
+                                return SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _handleInterested,
+                                    icon: _isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
+                                            ),
+                                          )
+                                        : Icon(
+                                            _isInterested
+                                                ? Icons.check
+                                                : Icons.favorite,
+                                            color: Colors.white,
+                                          ),
+                                    label: Text(
+                                      _isInterested
+                                          ? 'Remove Interest'
+                                          : 'I\'m Interested',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _isInterested
+                                          ? Colors.orange[700]
+                                          : Constants.primaryColor,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                return const SizedBox.shrink();
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Interested Donors List (only shown if current user is the requester)
+                  Builder(
+                    builder: (context) {
+                      final authManager = Provider.of<AuthManager>(context);
+                      final currentUser = authManager.user;
+                      final requestUserId =
+                          widget.requestData['userId'] as String?;
+                      final isRequester =
+                          currentUser != null &&
+                          requestUserId != null &&
+                          requestUserId == currentUser.uid;
+
+                      if (!isRequester) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.favorite,
+                                        color: Constants.primaryColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Interested Donors',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  StreamBuilder<DocumentSnapshot>(
+                                    stream: FirebaseFirestore.instance
+                                        .collection('requests')
+                                        .doc(widget.requestId)
+                                        .snapshots(),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return const Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        );
+                                      }
+
+                                      if (!snapshot.hasData) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Text(
+                                            'No donors have shown interest yet.',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      final requestData =
+                                          snapshot.data!.data()
+                                              as Map<String, dynamic>?;
+                                      final interestedDonorIds =
+                                          (requestData?['interestedDonors']
+                                              as List<dynamic>?) ??
+                                          [];
+                                      final reservedDonorIds =
+                                          (requestData?['reservedDonors']
+                                              as List<dynamic>?) ??
+                                          [];
+
+                                      if (interestedDonorIds.isEmpty) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Text(
+                                            'No donors have shown interest yet.',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      return FutureBuilder<
+                                        List<Map<String, dynamic>>
+                                      >(
+                                        future: _fetchDonorsData(
+                                          interestedDonorIds,
+                                          reservedDonorIds,
+                                        ),
+                                        builder: (context, donorsSnapshot) {
+                                          if (donorsSnapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return const Center(
+                                              child: Padding(
+                                                padding: EdgeInsets.all(16.0),
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              ),
+                                            );
+                                          }
+
+                                          final donors =
+                                              donorsSnapshot.data ?? [];
+
+                                          if (donors.isEmpty) {
+                                            return Padding(
+                                              padding: const EdgeInsets.all(
+                                                16.0,
+                                              ),
+                                              child: Text(
+                                                'No donors have shown interest yet.',
+                                                style: TextStyle(
+                                                  color: Colors.grey[600],
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          return Column(
+                                            children: donors.map((donor) {
+                                              final isReserved =
+                                                  donor['isReserved']
+                                                      as bool? ??
+                                                  false;
+                                              return Container(
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 12,
+                                                ),
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: isReserved
+                                                      ? Colors.green[50]
+                                                      : Colors.grey[50],
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isReserved
+                                                        ? Colors.green
+                                                        : Colors.grey[300]!,
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
                                                   children: [
-                                                    Row(
-                                                      children: [
-                                                        Text(
-                                                          donor['name']
-                                                                  as String? ??
-                                                              'Unknown',
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 16,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Text(
+                                                                donor['name']
+                                                                        as String? ??
+                                                                    'Unknown',
+                                                                style: const TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    // Call button
+                                                    IconButton(
+                                                      icon: Icon(
+                                                        Icons.phone,
+                                                        color: Constants
+                                                            .primaryColor,
+                                                      ),
+                                                      onPressed: () {
+                                                        final phone =
+                                                            donor['phone']
+                                                                as String? ??
+                                                            '';
+                                                        if (phone.isNotEmpty) {
+                                                          _makeCall(phone);
+                                                        } else {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text(
+                                                                'Phone number not available',
+                                                              ),
+                                                              backgroundColor:
+                                                                  Colors.orange,
+                                                            ),
+                                                          );
+                                                        }
+                                                      },
+                                                      tooltip: 'Call donor',
+                                                    ),
+                                                    // Reserve/Unreserve button
+                                                    ElevatedButton(
+                                                      onPressed: _isLoading
+                                                          ? null
+                                                          : isReserved
+                                                          ? () =>
+                                                                _unreserveDonor(
+                                                                  donor['id']
+                                                                      as String,
+                                                                )
+                                                          : () => _reserveDonor(
+                                                              donor['id']
+                                                                  as String,
+                                                            ),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            isReserved
+                                                            ? Colors.red[700]
+                                                            : Colors.green[700],
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 16,
+                                                              vertical: 8,
+                                                            ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
                                                               ),
                                                         ),
-                                                      ],
+                                                      ),
+                                                      child: Text(
+                                                        isReserved
+                                                            ? 'Unreserve'
+                                                            : 'Reserve',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
-                                              ),
-                                              // Call button
-                                              IconButton(
-                                                icon: Icon(
-                                                  Icons.phone,
-                                                  color: Constants.primaryColor,
-                                                ),
-                                                onPressed: () {
-                                                  final phone =
-                                                      donor['phone']
-                                                          as String? ??
-                                                      '';
-                                                  if (phone.isNotEmpty) {
-                                                    _makeCall(phone);
-                                                  } else {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                          'Phone number not available',
-                                                        ),
-                                                        backgroundColor:
-                                                            Colors.orange,
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                                tooltip: 'Call donor',
-                                              ),
-                                              // Reserve/Unreserve button
-                                              ElevatedButton(
-                                                onPressed: _isLoading
-                                                    ? null
-                                                    : isReserved
-                                                    ? () => _unreserveDonor(
-                                                        donor['id'] as String,
-                                                      )
-                                                    : () => _reserveDonor(
-                                                        donor['id'] as String,
-                                                      ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: isReserved
-                                                      ? Colors.red[700]
-                                                      : Colors.green[700],
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 16,
-                                                        vertical: 8,
-                                                      ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  isReserved
-                                                      ? 'Unreserve'
-                                                      : 'Reserve',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    );
-                                  },
-                                );
-                              },
+                                              );
+                                            }).toList(),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Location Information
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.local_hospital,
+                                color: Constants.primaryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Hospital Address',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (hospitalName != null && hospitalName.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                hospitalName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            address ?? hospitalName ?? 'Address not available',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          if (additionalNotes != null &&
+                              additionalNotes.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Additional Notes',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              additionalNotes,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
                             ),
                           ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              },
-            ),
-
-            // Location Information
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.local_hospital,
-                          color: Constants.primaryColor,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Hospital Address',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 16),
+                          // Directions Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: (latitude != null && longitude != null)
+                                  ? () => _openDirections(
+                                      context,
+                                      latitude,
+                                      longitude,
+                                    )
+                                  : null,
+                              icon: const Icon(
+                                Icons.directions,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Directions',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[700],
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (hospitalName != null && hospitalName.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          hospitalName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      address ?? hospitalName ?? 'Address not available',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    ),
-                    if (additionalNotes != null &&
-                        additionalNotes.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Additional Notes',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        additionalNotes,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    // Directions Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: (latitude != null && longitude != null)
-                            ? () =>
-                                  _openDirections(context, latitude, longitude)
-                            : null,
-                        icon: const Icon(Icons.directions, color: Colors.white),
-                        label: const Text(
-                          'Directions',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
