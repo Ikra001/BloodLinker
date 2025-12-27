@@ -10,6 +10,7 @@ import 'package:blood_linker/pages/request_details_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
 import 'package:blood_linker/pages/my_requests_page.dart';
+import 'package:blood_linker/pages/profile_page.dart'; // <--- ADDED IMPORT
 
 class HomePage extends StatefulWidget {
   static const route = '/home';
@@ -81,6 +82,20 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.history),
             tooltip: 'My Requests',
           ),
+
+          // --- NEW: PROFILE BUTTON ---
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
+            },
+            icon: const Icon(Icons.person),
+            tooltip: 'My Profile',
+          ),
+
+          // ---------------------------
           IconButton(
             onPressed: () => onPressedLogout(context),
             icon: const Icon(Icons.logout),

@@ -7,6 +7,8 @@ class CustomUser {
   final String phone;
   final String bloodType;
   final DateTime? lastDonationDate;
+  // --- NEW FIELDS ---
+  final int? age;
 
   const CustomUser({
     required this.userId,
@@ -15,6 +17,7 @@ class CustomUser {
     required this.phone,
     required this.bloodType,
     this.lastDonationDate,
+    this.age,
   });
 
   // Convert to Firestore Map
@@ -25,6 +28,7 @@ class CustomUser {
       'email': email,
       'phone': phone,
       'bloodType': bloodType,
+      'age': age, // Save age to Firestore
     };
 
     if (lastDonationDate != null) {
@@ -43,9 +47,29 @@ class CustomUser {
       email: data['email'] ?? '',
       phone: data['phone'] ?? '',
       bloodType: data['bloodType'] ?? 'O+',
+      age: data['age'], // Read age from Firestore
       lastDonationDate: data['lastDonationDate'] != null
           ? (data['lastDonationDate'] as Timestamp).toDate()
           : null,
+    );
+  }
+
+  // Helper method for local updates (optional but recommended)
+  CustomUser copyWith({
+    String? name,
+    String? phone,
+    String? bloodType,
+    int? age,
+    DateTime? lastDonationDate,
+  }) {
+    return CustomUser(
+      userId: userId,
+      email: email,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      bloodType: bloodType ?? this.bloodType,
+      age: age ?? this.age,
+      lastDonationDate: lastDonationDate ?? this.lastDonationDate,
     );
   }
 }

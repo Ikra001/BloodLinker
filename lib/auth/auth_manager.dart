@@ -143,20 +143,18 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  // --- UPDATED CREATE FUNCTION ---
+  // --- CREATE FUNCTION ---
   Future<bool> createBloodRequest({
     required String patientName,
     required String bloodGroup,
     required int bagsNeeded,
     required String contactNumber,
-    required String hospitalLocation, // This was missing
-    // New Fields
+    required String hospitalLocation,
     int? age,
     String? gender,
     DateTime? whenNeeded,
     bool isEmergency = false,
     String? additionalNotes,
-    // Location Fields
     double? latitude,
     double? longitude,
     String? hospitalName,
@@ -167,7 +165,7 @@ class AuthManager extends ChangeNotifier {
       if (_user == null) throw Exception("User not logged in");
 
       final requestData = <String, dynamic>{
-        'userId': _user!.uid, // Links request to your "My Requests" page
+        'userId': _user!.uid,
         'patientName': patientName,
         'bloodGroup': bloodGroup,
         'bagsNeeded': bagsNeeded,
@@ -175,8 +173,6 @@ class AuthManager extends ChangeNotifier {
         'hospitalLocation': hospitalLocation,
         'requestDate': FieldValue.serverTimestamp(),
         'status': 'pending',
-
-        // Save New Fields
         'age': age,
         'gender': gender,
         'isEmergency': isEmergency,
@@ -187,7 +183,6 @@ class AuthManager extends ChangeNotifier {
         requestData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
       }
 
-      // Add location data if available
       if (latitude != null && longitude != null) {
         requestData['latitude'] = latitude;
         requestData['longitude'] = longitude;
@@ -209,7 +204,7 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  // --- UPDATED UPDATE FUNCTION ---
+  // --- UPDATE REQUEST FUNCTION ---
   Future<bool> updateBloodRequest({
     required String requestId,
     required String patientName,
@@ -217,13 +212,11 @@ class AuthManager extends ChangeNotifier {
     required int bagsNeeded,
     required String contactNumber,
     required String hospitalLocation,
-    // New Fields needed for Edit Mode
     int? age,
     String? gender,
     DateTime? whenNeeded,
     bool isEmergency = false,
     String? additionalNotes,
-    // Location Fields
     double? latitude,
     double? longitude,
     String? hospitalName,
@@ -302,6 +295,41 @@ class AuthManager extends ChangeNotifier {
       return true;
     } catch (e) {
       _setLoading(false, error: 'Failed to update request: $e');
+      return false;
+    }
+  }
+
+  // --- UPDATED PROFILE FUNCTION (With Age & Date) ---
+  Future<bool> updateUserProfile({
+    required String name,
+    required String phone,
+    required String bloodType,
+    int? age,
+    DateTime? lastDonationDate,
+  }) async {
+    _setLoading(true);
+    try {
+      if (_user == null) throw Exception("User not logged in");
+
+      final updateData = <String, dynamic>{
+        'name': name,
+        'phone': phone,
+        'bloodType': bloodType,
+        'age': age,
+        'lastDonationDate': lastDonationDate != null
+            ? Timestamp.fromDate(lastDonationDate)
+            : null,
+      };
+
+      await _firestore.collection('users').doc(_user!.uid).update(updateData);
+
+      // Reload data to ensure app state is in sync
+      await _loadUserData(_user!.uid);
+
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(false, error: 'Failed to update profile: ${e.toString()}');
       return false;
     }
   }
