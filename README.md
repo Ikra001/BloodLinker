@@ -15,7 +15,7 @@
 - [Technical Architecture](#technical-architecture)
 - [Tech Stack](#tech-stack)
 - [Installation & Setup](#installation--setup)
-- [Future Roadmap](#future-roadmap)
+- [Contributors](#contributors)
 
 ---
 
