@@ -35,7 +35,6 @@ class _HomePageState extends State<HomePage> {
     'O-',
   ];
 
-  // --- LOGOUT DIALOG ---
   void _onPressedLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -92,7 +91,6 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildHeader(context),
 
-          // FILTER SECTION
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 0, 15),
             child: Column(
@@ -160,7 +158,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // REQUEST LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: requestsQuery.snapshots(),
@@ -213,7 +210,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- HEADER WIDGET ---
   Widget _buildHeader(BuildContext context) {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
@@ -241,7 +237,6 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         children: [
-          // Row 1: Title and Actions
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -287,7 +282,6 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 30),
 
-          // Row 2: Avatar + Name
           Row(
             children: [
               Container(
@@ -373,7 +367,6 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 25),
 
-          // Row 3: Request Button
           SizedBox(
             width: double.infinity,
             height: 55,
@@ -428,7 +421,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- CARD WIDGET ---
   Widget _buildRequestCard(
     BuildContext context,
     Map<String, dynamic> data,
@@ -469,7 +461,6 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Blood Group Box
                     Container(
                       height: 52,
                       width: 52,
@@ -507,7 +498,6 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 8),
 
-                          // Patient Left / Bags Right
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -593,7 +583,6 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: 20),
 
-                // Call Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -675,7 +664,6 @@ class _HomePageState extends State<HomePage> {
     return bloodType;
   }
 
-  // --- FIXED: Shows FULL words instead of abbreviations ---
   String _formatLastDonationDate(DateTime date) {
     final difference = DateTime.now().difference(date);
     if (difference.inDays == 0) {
@@ -686,11 +674,9 @@ class _HomePageState extends State<HomePage> {
       return '${difference.inDays} days ago';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
-      // Changed "mos" to "months"
       return months == 1 ? '1 month ago' : '$months months ago';
     } else {
       final years = (difference.inDays / 365).floor();
-      // Changed "yr" to "year"
       return years == 1 ? '1 year ago' : '$years years ago';
     }
   }

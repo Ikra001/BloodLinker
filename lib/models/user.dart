@@ -7,7 +7,6 @@ class CustomUser {
   final String phone;
   final String bloodType;
   final DateTime? lastDonationDate;
-  // --- NEW FIELDS ---
   final int? age;
 
   const CustomUser({

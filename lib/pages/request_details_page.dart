@@ -62,10 +62,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       return;
     }
 
-    // Try launching directly - canLaunchUrl can be unreliable
-    // We'll try multiple URL schemes and catch errors
-
-    // 1. Try Google Maps web URL first (most reliable, works everywhere)
     try {
       final googleMapsWebUrl = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
@@ -79,7 +75,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       AppLogger.error('Google Maps web launch failed', e);
     }
 
-    // 2. Try Google Maps app (Android)
     try {
       final googleMapsAppUrl = Uri.parse(
         'comgooglemaps://?q=$latitude,$longitude',
@@ -93,7 +88,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       AppLogger.error('Google Maps app launch failed', e);
     }
 
-    // 3. Try geo: scheme (Android default maps)
     try {
       final geoUrl = Uri.parse(
         'geo:$latitude,$longitude?q=$latitude,$longitude',
@@ -107,7 +101,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       AppLogger.error('Geo scheme launch failed', e);
     }
 
-    // 4. Try Apple Maps (iOS)
     try {
       final appleMapsUrl = Uri.parse(
         'https://maps.apple.com/?q=$latitude,$longitude&ll=$latitude,$longitude',
@@ -121,7 +114,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       AppLogger.error('Apple Maps launch failed', e);
     }
 
-    // 5. Last resort: Try opening in platform default (might open browser)
     try {
       final fallbackUrl = Uri.parse(
         'https://www.google.com/maps?q=$latitude,$longitude',
@@ -208,7 +200,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   }
 
   String _normalizeBloodGroup(String bloodType) {
-    // Convert various blood type formats to standard format (e.g., "A+")
     if (bloodType.contains('(+ve)')) {
       return bloodType.replaceAll(' (+ve)', '+').replaceAll('(+ve)', '+');
     }
@@ -226,7 +217,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           .toUpperCase();
       return '$type$sign';
     }
-    // If already in standard format (A+, B-, etc.), return as is
     return bloodType.trim();
   }
 
@@ -236,7 +226,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     dynamic whenNeeded,
     DateTime? userLastDonationDate,
   ) {
-    // Check blood group match
     if (userBloodType == null || userBloodType.isEmpty) return false;
 
     final normalizedUser = _normalizeBloodGroup(userBloodType);
@@ -244,13 +233,10 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
 
     if (normalizedUser != normalizedPatient) return false;
 
-    // Check 3-month rule: whenNeeded - lastDonationDate >= 3 months
-    // If lastDonationDate is null, consider user never donated, so they pass the check
     if (userLastDonationDate == null) {
-      return true; // Never donated, eligible
+      return true;
     }
 
-    // If whenNeeded is not specified, consider them eligible (can't check the rule)
     if (whenNeeded == null) {
       return true;
     }
@@ -261,14 +247,10 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     } else if (whenNeeded is DateTime) {
       whenNeededDate = whenNeeded;
     } else {
-      return true; // Can't parse whenNeeded, consider eligible
+      return true;
     }
 
-    // Calculate the difference
     final difference = whenNeededDate.difference(userLastDonationDate);
-
-    // Check if at least 3 months (approximately 90 days) have passed
-    // Using 90 days as an approximation for 3 months
     return difference.inDays >= 90;
   }
 
@@ -294,15 +276,12 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           .collection('requests')
           .doc(widget.requestId);
 
-      // Get current interestedDonors array
       final doc = await requestRef.get();
       final currentData = doc.data();
       final currentInterested =
           (currentData?['interestedDonors'] as List<dynamic>?) ?? [];
 
-      // Check if user is already in the list - toggle interest
       if (currentInterested.contains(user.uid)) {
-        // Remove user ID from the array
         await requestRef.update({
           'interestedDonors': FieldValue.arrayRemove([user.uid]),
         });
@@ -323,7 +302,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         return;
       }
 
-      // Add user ID to the array
       await requestRef.update({
         'interestedDonors': FieldValue.arrayUnion([user.uid]),
       });
@@ -367,10 +345,8 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     final additionalNotes = widget.requestData['additionalNotes'] as String?;
     final isEmergency = widget.requestData['isEmergency'] as bool? ?? false;
 
-    // Build the share text
     final buffer = StringBuffer();
 
-    // First line: Emergency prefix (if applicable) + bags and blood group
     if (isEmergency) {
       buffer.write('Emergency: ');
     }
@@ -378,23 +354,18 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       '$bagsNeeded bag${bagsNeeded > 1 ? 's' : ''} of $bloodGroup blood needed.\n',
     );
 
-    // Hospital
     buffer.write('Hospital: ${hospitalName ?? 'Not specified'}\n');
 
-    // Date
     final dateStr = _formatHumanReadableDate(requestDate);
     buffer.write('Date: $dateStr\n');
 
-    // Time (when needed)
     if (whenNeeded != null) {
       final timeStr = _formatTime(whenNeeded);
       buffer.write('Time: $timeStr\n');
     }
 
-    // Contact
     buffer.write('Contact: $contactNumber\n');
 
-    // Notes
     if (additionalNotes != null && additionalNotes.isNotEmpty) {
       buffer.write('Notes: $additionalNotes');
     } else {
@@ -429,14 +400,12 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   @override
   void initState() {
     super.initState();
-    // Check if user is already interested and load requester name
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
   }
 
   Future<void> _loadInitialData() async {
-    // Load all initial data in parallel
     await Future.wait([
       _checkIfInterested(),
       _loadRequesterName(),
@@ -487,7 +456,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     if (user == null) return;
 
     try {
-      // Check if user is reserved in any request
       final reservedSnapshot = await FirebaseFirestore.instance
           .collection('requests')
           .where('reservedDonors', arrayContains: user.uid)
@@ -584,8 +552,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         'reservedDonors': FieldValue.arrayRemove([donorId]),
       });
 
-      // The StreamBuilder will automatically update the list
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -619,7 +585,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     });
 
     try {
-      // Get current request data to find reserved donor
       final requestDoc = await FirebaseFirestore.instance
           .collection('requests')
           .doc(widget.requestId)
@@ -644,16 +609,13 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         return;
       }
 
-      // Get the reserved donor ID (should be only one)
       final reservedDonorId = reservedDonors[0] as String;
 
-      // Get patient information from request
       final patientName =
           widget.requestData['patientName'] as String? ?? 'Unknown';
       final contactNumber =
           widget.requestData['contactNumber'] as String? ?? '';
 
-      // Add donation entry to the donor's donationHistory collection
       await FirebaseFirestore.instance
           .collection('users')
           .doc(reservedDonorId)
@@ -665,13 +627,11 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
             'requestId': widget.requestId,
           });
 
-      // Update the donor's lastDonationDate
       await FirebaseFirestore.instance
           .collection('users')
           .doc(reservedDonorId)
           .update({'lastDonationDate': FieldValue.serverTimestamp()});
 
-      // Delete the request after marking as completed
       await FirebaseFirestore.instance
           .collection('requests')
           .doc(widget.requestId)
@@ -716,17 +676,13 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           .collection('requests')
           .doc(widget.requestId);
 
-      // Get current document to check for existing reserved donors
       final currentDoc = await requestRef.get();
       final currentData = currentDoc.data();
       final currentReservedDonors =
           (currentData?['reservedDonors'] as List<dynamic>?) ?? [];
 
-      // Rule: A requester can reserve only one donor
-      // If there's already a reserved donor, remove them first
       if (currentReservedDonors.isNotEmpty) {
         final previousDonorId = currentReservedDonors[0] as String;
-        // If trying to reserve the same donor, do nothing
         if (previousDonorId == donorId) {
           if (mounted) {
             setState(() {
@@ -735,19 +691,15 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           }
           return;
         }
-        // Remove the previous reserved donor
         await requestRef.update({
           'reservedDonors': FieldValue.arrayRemove([previousDonorId]),
         });
       }
 
-      // Add the new reserved donor
       await requestRef.update({
         'reservedDonors': FieldValue.arrayUnion([donorId]),
       });
 
-      // Remove donor from interestedDonors of all other requests
-      // (they can't donate to others when reserved)
       final allRequestsSnapshot = await FirebaseFirestore.instance
           .collection('requests')
           .where('interestedDonors', arrayContains: donorId)
@@ -755,7 +707,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
 
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in allRequestsSnapshot.docs) {
-        // Skip the current request (keep them interested in the request they're reserved for)
         if (doc.id != widget.requestId) {
           batch.update(doc.reference, {
             'interestedDonors': FieldValue.arrayRemove([donorId]),
@@ -763,8 +714,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         }
       }
       await batch.commit();
-
-      // The StreamBuilder will automatically update the list
 
       if (mounted) {
         setState(() {
@@ -794,7 +743,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   }
 
   Future<void> _handleEdit() async {
-    // Navigate to edit page
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -805,7 +753,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       ),
     );
 
-    // If the edit was successful, pop this page to refresh
     if (result == true && mounted) {
       Navigator.pop(context, true);
     }
@@ -900,7 +847,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
 
-    // Handle both double and num types from Firestore
     final latValue = widget.requestData['latitude'];
     final lngValue = widget.requestData['longitude'];
     final latitude = latValue != null
@@ -942,7 +888,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Patient Details
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -965,7 +910,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                 ),
                               ),
                               const Spacer(),
-                              // Blood Group Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -991,7 +935,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                               ),
                             ],
                           ),
-                          // Relative time subtitle
                           if (_formatRelativeTime(requestDate).isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Padding(
@@ -1057,7 +1000,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                 ],
                               ),
                             ),
-                          // Eligibility Chip
                           if (isEligible)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -1146,7 +1088,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                               _formatWhenNeeded(whenNeeded),
                             ),
                           ],
-                          // Share Button (shown for both eligible and not eligible)
                           if (isEligible) const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
@@ -1172,7 +1113,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Call Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
@@ -1199,7 +1139,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Edit/Delete buttons (shown if current user is requester) or Interested button (shown if eligible and not requester)
                           Builder(
                             builder: (context) {
                               final authManager = Provider.of<AuthManager>(
@@ -1214,7 +1153,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                   requestUserId == currentUser.uid;
 
                               if (isRequester) {
-                                // Show Edit and Delete buttons for requester
                                 return Row(
                                   children: [
                                     Expanded(
@@ -1273,7 +1211,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                   ],
                                 );
                               } else if (isEligible && !_isUserReserved) {
-                                // Show Interested button for eligible users who are not the requester and not already reserved
                                 return SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
@@ -1330,7 +1267,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Interested Donors List (only shown if current user is the requester)
                   Builder(
                     builder: (context) {
                       final authManager = Provider.of<AuthManager>(context);
@@ -1519,7 +1455,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                                         ],
                                                       ),
                                                     ),
-                                                    // Call button
                                                     IconButton(
                                                       icon: Icon(
                                                         Icons.phone,
@@ -1549,7 +1484,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                                       },
                                                       tooltip: 'Call donor',
                                                     ),
-                                                    // Reserve/Unreserve button
                                                     ElevatedButton(
                                                       onPressed: _isLoading
                                                           ? null
@@ -1604,7 +1538,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Mark as Completed button (shown if there's a reserved donor)
                           StreamBuilder<DocumentSnapshot>(
                             stream: FirebaseFirestore.instance
                                 .collection('requests')
@@ -1785,7 +1718,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                             ),
                           ],
                           const SizedBox(height: 16),
-                          // Directions Button
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(

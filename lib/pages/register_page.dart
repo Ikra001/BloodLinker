@@ -93,7 +93,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Name
                     TextFormField(
                       controller: _nameController,
                       decoration: Constants.roundedInputDecoration(
@@ -105,7 +104,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -117,7 +115,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Phone
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
@@ -130,7 +127,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Password
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -152,7 +148,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Blood Type
                     DropdownButtonFormField<String>(
                       initialValue: _selectedBloodType,
                       decoration: Constants.roundedInputDecoration(
@@ -176,7 +171,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                     const SizedBox(height: 30),
 
-                    // Register Button
                     Consumer<AuthManager>(
                       builder: (context, authManager, child) {
                         return SizedBox(

@@ -60,7 +60,6 @@ class _WelcomePageState extends State<WelcomePage> {
               // Added a little top spacing since Skip button is gone
               const SizedBox(height: 20),
 
-              // 1. SLIDER SECTION
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -78,7 +77,6 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
               ),
 
-              // 2. DOT INDICATORS
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -89,7 +87,6 @@ class _WelcomePageState extends State<WelcomePage> {
 
               const SizedBox(height: 50),
 
-              // 3. BOTTOM BUTTONS
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
@@ -180,8 +177,6 @@ class _WelcomePageState extends State<WelcomePage> {
       ),
     );
   }
-
-  // --- HELPER WIDGETS ---
 
   Widget _buildElegantSlide({
     required String title,
