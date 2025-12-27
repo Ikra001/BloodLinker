@@ -231,28 +231,70 @@ class AuthManager extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
+      // Fetch current document to preserve existing values if new values are null
+      final currentDoc = await _firestore
+          .collection('requests')
+          .doc(requestId)
+          .get();
+      final currentData = currentDoc.data() ?? {};
+
+      // Build update data - always include required fields
       final updateData = <String, dynamic>{
         'patientName': patientName,
         'bloodGroup': bloodGroup,
         'bagsNeeded': bagsNeeded,
         'contactNumber': contactNumber,
         'hospitalLocation': hospitalLocation,
-        'age': age,
-        'gender': gender,
         'isEmergency': isEmergency,
-        'additionalNotes': additionalNotes,
       };
 
-      if (whenNeeded != null) {
-        updateData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
+      // Include age - use provided value or preserve existing
+      if (age != null) {
+        updateData['age'] = age;
+      } else if (currentData.containsKey('age')) {
+        // Preserve existing age if not provided
+        updateData['age'] = currentData['age'];
       }
 
+      // Include gender - use provided value or preserve existing
+      if (gender != null && gender.isNotEmpty) {
+        updateData['gender'] = gender;
+      } else if (currentData.containsKey('gender')) {
+        // Preserve existing gender if not provided
+        updateData['gender'] = currentData['gender'];
+      }
+
+      // Always include additionalNotes - update it even if empty (user may have cleared it)
+      updateData['additionalNotes'] =
+          (additionalNotes != null && additionalNotes.isNotEmpty)
+          ? additionalNotes
+          : null;
+
+      // Handle whenNeeded - use provided value or preserve existing
+      if (whenNeeded != null) {
+        updateData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
+      } else if (currentData.containsKey('whenNeeded')) {
+        // Preserve existing whenNeeded if not provided
+        updateData['whenNeeded'] = currentData['whenNeeded'];
+      }
+
+      // Location fields - only update if provided
       if (latitude != null && longitude != null) {
         updateData['latitude'] = latitude;
         updateData['longitude'] = longitude;
       }
-      if (hospitalName != null) updateData['hospitalName'] = hospitalName;
-      if (address != null) updateData['address'] = address;
+      if (hospitalName != null && hospitalName.isNotEmpty) {
+        updateData['hospitalName'] = hospitalName;
+      } else if (hospitalName != null && hospitalName.isEmpty) {
+        // If explicitly set to empty, remove it
+        updateData['hospitalName'] = null;
+      }
+      if (address != null && address.isNotEmpty) {
+        updateData['address'] = address;
+      } else if (address != null && address.isEmpty) {
+        // If explicitly set to empty, remove it
+        updateData['address'] = null;
+      }
 
       await _firestore.collection('requests').doc(requestId).update(updateData);
 

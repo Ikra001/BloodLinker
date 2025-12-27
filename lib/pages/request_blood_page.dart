@@ -191,12 +191,17 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
           bagsNeeded: int.parse(_bagsController.text.trim()),
           contactNumber: _contactController.text.trim(),
           hospitalLocation: hospitalLocation,
+          age: int.tryParse(_ageController.text.trim()),
+          gender: _selectedGender,
+          whenNeeded: _whenNeeded,
+          isEmergency: _isEmergency,
+          additionalNotes: _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
           latitude: _selectedLocation?['latitude'],
           longitude: _selectedLocation?['longitude'],
           hospitalName: _selectedLocation?['hospitalName'],
           address: _selectedLocation?['address'],
-          // NOTE: Your Update function needs to accept these new fields too
-          // (age, gender, notes, etc). If not added yet, add them to AuthManager.updateBloodRequest
         );
       } else {
         // CREATE NEW
