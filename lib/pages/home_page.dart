@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
     'O-',
   ];
 
-  // --- CHANGED: Now shows a Dialog instead of logging out immediately ---
+  // --- LOGOUT DIALOG ---
   void _onPressedLogout(BuildContext context) {
     showDialog(
       context: context,
@@ -46,21 +46,17 @@ class _HomePageState extends State<HomePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), // Close dialog
+            onPressed: () => Navigator.pop(context),
             child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog first
-
-              // Perform Logout
+              Navigator.pop(context);
               final authManager = Provider.of<AuthManager>(
                 context,
                 listen: false,
               );
               await authManager.logout();
-
-              // Navigate to Welcome
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const WelcomePage()),
@@ -96,6 +92,8 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           _buildModernHeader(context),
+
+          // FILTER SECTION
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 25, 0, 15),
             child: Column(
@@ -129,30 +127,39 @@ class _HomePageState extends State<HomePage> {
                               });
                             }
                           },
-                          selectedColor: Constants.primaryColor,
+                          // --- UPDATED COLORS FOR CONSISTENCY ---
+                          // 1. Use the specific "Elegant Red" used in header/buttons
+                          selectedColor: const Color(0xFFD32F2F),
                           backgroundColor: Colors.white,
+                          checkmarkColor: Colors.white, // Tick is White
+                          // 2. Softer Text Colors
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : Colors.grey[700],
+                            color: isSelected ? Colors.white : Colors.grey[600],
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.w500,
-                            fontSize: 15,
+                            fontSize: 14,
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 10,
+                            vertical: 8,
                           ),
+
+                          // 3. Cleaner Shape (No border when selected)
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                            borderRadius: BorderRadius.circular(50),
                             side: BorderSide(
                               color: isSelected
-                                  ? Constants.primaryColor
-                                  : Colors.grey.shade300,
+                                  ? Colors
+                                        .transparent // No border on selected (Clean look)
+                                  : Colors.grey.withOpacity(
+                                      0.2,
+                                    ), // Very soft border on unselected
                               width: 1,
                             ),
                           ),
-                          elevation: isSelected ? 2 : 0,
-                          shadowColor: Constants.primaryColor.withOpacity(0.3),
+                          elevation: isSelected ? 4 : 0,
+                          shadowColor: const Color(0xFFD32F2F).withOpacity(0.4),
                         ),
                       );
                     }).toList(),
@@ -161,6 +168,8 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+
+          // REQUEST LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: requestsQuery.snapshots(),
@@ -169,51 +178,24 @@ class _HomePageState extends State<HomePage> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        "Error: ${snapshot.error}",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  );
+                  return Center(child: Text("Error: ${snapshot.error}"));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(25),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.bloodtype_outlined,
-                            size: 60,
-                            color: Colors.grey[400],
-                          ),
+                        Icon(
+                          Icons.bloodtype_outlined,
+                          size: 60,
+                          color: Colors.grey[400],
                         ),
                         const SizedBox(height: 20),
                         Text(
                           _selectedFilter == 'All'
                               ? "No requests found nearby."
                               : "No $_selectedFilter requests found.",
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: TextStyle(color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -240,6 +222,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // --- HEADER WIDGET ---
   Widget _buildModernHeader(BuildContext context) {
     final authManager = Provider.of<AuthManager>(context);
     final user = authManager.customUser;
@@ -301,7 +284,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(width: 15),
-                  // Logout Button triggers the Dialog
                   _buildHeaderIcon(
                     Icons.logout_rounded,
                     () => _onPressedLogout(context),
@@ -440,15 +422,13 @@ class _HomePageState extends State<HomePage> {
     return IconButton(
       onPressed: onTap,
       icon: Icon(icon, color: Colors.white, size: 26),
-      tooltip: 'Action',
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(),
       style: IconButton.styleFrom(
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
 
+  // --- CARD WIDGET ---
   Widget _buildElegantRequestCard(
     BuildContext context,
     Map<String, dynamic> data,
@@ -526,6 +506,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 8),
 
+                          // Patient Left / Bags Right
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
