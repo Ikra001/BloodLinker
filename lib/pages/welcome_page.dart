@@ -55,41 +55,10 @@ class _WelcomePageState extends State<WelcomePage> {
         child: SafeArea(
           child: Column(
             children: [
-              // 1. HEADER (Skip Button)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // Logic Fix: Skip usually means "I'm new, let's start" -> Register
-                      Navigator.pushNamed(context, RegisterPage.route);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey[600],
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      "Skip Intro",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              // Added a little top spacing since Skip button is gone
+              const SizedBox(height: 20),
 
-              // 2. SLIDER SECTION
+              // 1. SLIDER SECTION
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -107,7 +76,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
               ),
 
-              // 3. DOT INDICATORS
+              // 2. DOT INDICATORS
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
@@ -118,7 +87,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
               const SizedBox(height: 50),
 
-              // 4. BOTTOM BUTTONS
+              // 3. BOTTOM BUTTONS
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
