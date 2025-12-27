@@ -96,10 +96,7 @@ class _LoadingScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/logo.png',
-              width: 140,
-            ),
+            Image.asset('assets/logo.png', width: 140),
             const SizedBox(height: 24),
             const CircularProgressIndicator(),
           ],
