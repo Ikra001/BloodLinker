@@ -27,6 +27,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   bool _isInterested = false;
   bool _isLoading = false;
   String? _requesterName;
+  bool _isUserReserved = false;
 
   Future<void> _makeCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) {
@@ -397,7 +398,32 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkIfInterested();
       _loadRequesterName();
+      _checkIfUserReserved();
     });
+  }
+
+  Future<void> _checkIfUserReserved() async {
+    final authManager = Provider.of<AuthManager>(context, listen: false);
+    final user = authManager.user;
+
+    if (user == null) return;
+
+    try {
+      // Check if user is reserved in any request
+      final reservedSnapshot = await FirebaseFirestore.instance
+          .collection('requests')
+          .where('reservedDonors', arrayContains: user.uid)
+          .limit(1)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _isUserReserved = reservedSnapshot.docs.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Error checking if user is reserved', e);
+    }
   }
 
   Future<void> _loadRequesterName() async {
@@ -465,6 +491,50 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     return donors;
   }
 
+  Future<void> _unreserveDonor(String donorId) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final requestRef = FirebaseFirestore.instance
+          .collection('requests')
+          .doc(widget.requestId);
+
+      // Remove from reservedDonors (but keep in interestedDonors)
+      await requestRef.update({
+        'reservedDonors': FieldValue.arrayRemove([donorId]),
+      });
+
+      // The StreamBuilder will automatically update the list
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Donor unreserved successfully!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Error unreserving donor', e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _reserveDonor(String donorId) async {
     setState(() {
       _isLoading = true;
@@ -475,9 +545,53 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           .collection('requests')
           .doc(widget.requestId);
 
+      // Get current document to check for existing reserved donors
+      final currentDoc = await requestRef.get();
+      final currentData = currentDoc.data();
+      final currentReservedDonors =
+          (currentData?['reservedDonors'] as List<dynamic>?) ?? [];
+
+      // Rule: A requester can reserve only one donor
+      // If there's already a reserved donor, remove them first
+      if (currentReservedDonors.isNotEmpty) {
+        final previousDonorId = currentReservedDonors[0] as String;
+        // If trying to reserve the same donor, do nothing
+        if (previousDonorId == donorId) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+        // Remove the previous reserved donor
+        await requestRef.update({
+          'reservedDonors': FieldValue.arrayRemove([previousDonorId]),
+        });
+      }
+
+      // Add the new reserved donor
       await requestRef.update({
         'reservedDonors': FieldValue.arrayUnion([donorId]),
       });
+
+      // Remove donor from interestedDonors of all other requests
+      // (they can't donate to others when reserved)
+      final allRequestsSnapshot = await FirebaseFirestore.instance
+          .collection('requests')
+          .where('interestedDonors', arrayContains: donorId)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in allRequestsSnapshot.docs) {
+        // Skip the current request (keep them interested in the request they're reserved for)
+        if (doc.id != widget.requestId) {
+          batch.update(doc.reference, {
+            'interestedDonors': FieldValue.arrayRemove([donorId]),
+          });
+        }
+      }
+      await batch.commit();
 
       // The StreamBuilder will automatically update the list
 
@@ -949,8 +1063,8 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                               ),
                             ],
                           );
-                        } else if (isEligible) {
-                          // Show Interested button for eligible users who are not the requester
+                        } else if (isEligible && !_isUserReserved) {
+                          // Show Interested button for eligible users who are not the requester and not already reserved
                           return SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
@@ -1180,38 +1294,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                                                         .w600,
                                                               ),
                                                         ),
-                                                        if (isReserved) ...[
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal: 8,
-                                                                  vertical: 4,
-                                                                ),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                                  color: Colors
-                                                                      .green,
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        12,
-                                                                      ),
-                                                                ),
-                                                            child: const Text(
-                                                              'Reserved',
-                                                              style: TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 10,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
                                                       ],
                                                     ),
                                                   ],
@@ -1246,37 +1328,43 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                                 },
                                                 tooltip: 'Call donor',
                                               ),
-                                              // Reserve button
-                                              if (!isReserved)
-                                                ElevatedButton(
-                                                  onPressed: _isLoading
-                                                      ? null
-                                                      : () => _reserveDonor(
-                                                          donor['id'] as String,
+                                              // Reserve/Unreserve button
+                                              ElevatedButton(
+                                                onPressed: _isLoading
+                                                    ? null
+                                                    : isReserved
+                                                    ? () => _unreserveDonor(
+                                                        donor['id'] as String,
+                                                      )
+                                                    : () => _reserveDonor(
+                                                        donor['id'] as String,
+                                                      ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: isReserved
+                                                      ? Colors.red[700]
+                                                      : Colors.green[700],
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 8,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
                                                         ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.green[700],
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 8,
-                                                        ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'Reserve',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                    ),
                                                   ),
                                                 ),
+                                                child: Text(
+                                                  isReserved
+                                                      ? 'Unreserve'
+                                                      : 'Reserve',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         );
