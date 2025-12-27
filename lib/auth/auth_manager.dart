@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:blood_linker/models/user.dart';
+import 'package:blood_linker/utils/logger.dart';
 
 class AuthManager extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -39,13 +40,17 @@ class AuthManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Helper method to set loading state and error
+  void _setLoading(bool loading, {String? error}) {
+    _isLoading = loading;
+    _errorMessage = error;
+    notifyListeners();
+  }
+
   // Sign in with email and password
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
+    _setLoading(true);
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
-
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -56,18 +61,16 @@ class AuthManager extends ChangeNotifier {
         await _loadUserData(userCredential.user!.uid);
       }
 
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      _errorMessage = _getErrorMessage(e.code);
-      notifyListeners();
+      _setLoading(false, error: _getErrorMessage(e.code));
       return false;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'An unexpected error occurred: ${e.toString()}';
-      notifyListeners();
+      _setLoading(
+        false,
+        error: 'An unexpected error occurred: ${e.toString()}',
+      );
       return false;
     }
   }
@@ -80,18 +83,15 @@ class AuthManager extends ChangeNotifier {
     String? phone,
     required String bloodType,
   }) async {
+    _setLoading(true);
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
-
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       // Create a standard CustomUser object
-      CustomUser customUser = CustomUser(
+      final customUser = CustomUser(
         userId: userCredential.user!.uid,
         name: name ?? '',
         email: email,
@@ -106,18 +106,16 @@ class AuthManager extends ChangeNotifier {
           .set(customUser.toFirestore());
 
       _customUser = customUser;
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      _errorMessage = _getErrorMessage(e.code);
-      notifyListeners();
+      _setLoading(false, error: _getErrorMessage(e.code));
       return false;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'An unexpected error occurred: ${e.toString()}';
-      notifyListeners();
+      _setLoading(
+        false,
+        error: 'An unexpected error occurred: ${e.toString()}',
+      );
       return false;
     }
   }
@@ -130,25 +128,18 @@ class AuthManager extends ChangeNotifier {
         _customUser = CustomUser.fromFirestore(doc);
       }
     } catch (e) {
-      debugPrint('Error loading user data: $e');
+      AppLogger.error('Error loading user data', e);
     }
   }
 
   // Logout
   Future<void> logout() async {
+    _setLoading(true);
     try {
-      _isLoading = true;
-      _errorMessage = null;
-      notifyListeners();
-
       await _auth.signOut();
-
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'Failed to logout: ${e.toString()}';
-      notifyListeners();
+      _setLoading(false, error: 'Failed to logout: ${e.toString()}');
     }
   }
 
@@ -187,14 +178,16 @@ class AuthManager extends ChangeNotifier {
     required int bagsNeeded,
     required String contactNumber,
     required String hospitalLocation,
+    double? latitude,
+    double? longitude,
+    String? hospitalName,
+    String? address,
   }) async {
+    _setLoading(true);
     try {
-      _isLoading = true;
-      notifyListeners();
-
       if (_user == null) throw Exception("User not logged in");
 
-      await _firestore.collection('requests').add({
+      final requestData = <String, dynamic>{
         'requesterId': _user!.uid,
         'patientName': patientName,
         'bloodGroup': bloodGroup,
@@ -202,17 +195,27 @@ class AuthManager extends ChangeNotifier {
         'contactNumber': contactNumber,
         'hospitalLocation': hospitalLocation,
         'requestDate': FieldValue.serverTimestamp(),
-        'status':
-            'pending', // You can use this later to mark requests as fulfilled
-      });
+        'status': 'pending',
+      };
 
-      _isLoading = false;
-      notifyListeners();
+      // Add location data if available
+      if (latitude != null && longitude != null) {
+        requestData['latitude'] = latitude;
+        requestData['longitude'] = longitude;
+      }
+      if (hospitalName != null && hospitalName.isNotEmpty) {
+        requestData['hospitalName'] = hospitalName;
+      }
+      if (address != null && address.isNotEmpty) {
+        requestData['address'] = address;
+      }
+
+      await _firestore.collection('requests').add(requestData);
+
+      _setLoading(false);
       return true;
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = 'Failed to create request: ${e.toString()}';
-      notifyListeners();
+      _setLoading(false, error: 'Failed to create request: ${e.toString()}');
       return false;
     }
   }

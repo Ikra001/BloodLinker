@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +8,7 @@ import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
+import 'package:blood_linker/utils/logger.dart';
 
 class HomePage extends StatelessWidget {
   static const route = '/home';
@@ -340,11 +340,7 @@ class HomePage extends StatelessWidget {
                     try {
                       await launchUrl(launchUri);
                     } catch (e) {
-                      if (kDebugMode) {
-                        debugPrint(
-                          "Error: $e",
-                        ); // Prints error to console if it fails
-                      }
+                      AppLogger.error('Error launching phone dialer', e);
                     }
                   }
                 },
@@ -385,18 +381,18 @@ class HomePage extends StatelessWidget {
   String _getDisplayBloodGroup(String? bloodType) {
     if (bloodType == null || bloodType.isEmpty) return "N/A";
 
-    // Blood type is already in A+ format, just return it
     // Handle legacy formats if any exist in database
     if (bloodType.contains('(+ve)')) {
       return bloodType.replaceAll(' (+ve)', '+');
-    } else if (bloodType.contains('(-ve)')) {
+    }
+    if (bloodType.contains('(-ve)')) {
       return bloodType.replaceAll(' (-ve)', '-');
-    } else if (bloodType.toLowerCase().contains('positive') ||
+    }
+    if (bloodType.toLowerCase().contains('positive') ||
         bloodType.toLowerCase().contains('negative')) {
-      // Fallback for old "A Positive" format
-      String clean = bloodType.toLowerCase();
-      String sign = clean.contains('positive') ? '+' : '-';
-      String type = clean
+      final clean = bloodType.toLowerCase();
+      final sign = clean.contains('positive') ? '+' : '-';
+      final type = clean
           .replaceAll('positive', '')
           .replaceAll('negative', '')
           .trim()

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
 import 'package:blood_linker/constants.dart';
+import 'package:blood_linker/pages/map_location_page.dart';
 
 class RequestBloodPage extends StatefulWidget {
   static const route = '/request_blood';
@@ -18,29 +19,57 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
   final _patientNameController = TextEditingController();
   final _bagsController = TextEditingController();
   final _contactController = TextEditingController();
-  final _locationController = TextEditingController();
 
   String? _selectedBloodGroup;
+  Map<String, dynamic>? _selectedLocation;
 
   @override
   void dispose() {
     _patientNameController.dispose();
     _bagsController.dispose();
     _contactController.dispose();
-    _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectLocation() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (context) => const MapLocationPage()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedLocation = result;
+      });
+    }
   }
 
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a location on the map')),
+        );
+        return;
+      }
+
       final authManager = Provider.of<AuthManager>(context, listen: false);
+
+      final hospitalLocation =
+          _selectedLocation!['hospitalName']?.isNotEmpty == true
+          ? _selectedLocation!['hospitalName'] as String
+          : _selectedLocation!['address'] as String? ?? 'Custom Location';
 
       final success = await authManager.createBloodRequest(
         patientName: _patientNameController.text.trim(),
         bloodGroup: _selectedBloodGroup!,
         bagsNeeded: int.parse(_bagsController.text.trim()),
         contactNumber: _contactController.text.trim(),
-        hospitalLocation: _locationController.text.trim(),
+        hospitalLocation: hospitalLocation,
+        latitude: _selectedLocation!['latitude'] as double?,
+        longitude: _selectedLocation!['longitude'] as double?,
+        hospitalName: _selectedLocation!['hospitalName'] as String?,
+        address: _selectedLocation!['address'] as String?,
       );
 
       if (!mounted) return;
@@ -49,11 +78,11 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Blood request posted successfully!')),
         );
-        Navigator.pop(context); // Go back to Home
+        Navigator.pop(context);
       } else if (authManager.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authManager.errorMessage ?? 'Error occurred')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authManager.errorMessage!)));
       }
     }
   }
@@ -130,15 +159,73 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Hospital/Location
-              TextFormField(
-                controller: _locationController,
-                decoration: _inputDecoration(
-                  'Hospital / Location',
-                  Icons.location_on,
+              // Hospital/Location Selection
+              InkWell(
+                onTap: _selectLocation,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on, color: Constants.primaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedLocation != null
+                                  ? (_selectedLocation!['hospitalName']
+                                                ?.toString()
+                                                .isNotEmpty ==
+                                            true
+                                        ? _selectedLocation!['hospitalName']
+                                              as String
+                                        : 'Custom Location')
+                                  : 'Hospital / Location',
+                              style: TextStyle(
+                                color: _selectedLocation != null
+                                    ? Colors.black
+                                    : Colors.grey,
+                                fontWeight: _selectedLocation != null
+                                    ? FontWeight.w500
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                            if (_selectedLocation != null &&
+                                _selectedLocation!['address'] != null)
+                              Text(
+                                _selectedLocation!['address'] as String,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
                 ),
-                validator: (v) => v!.isEmpty ? 'Enter location' : null,
               ),
+              if (_selectedLocation == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, left: 12),
+                  child: Text(
+                    'Please select a location',
+                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                  ),
+                ),
               const SizedBox(height: 15),
 
               // Contact Number
