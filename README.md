@@ -1,50 +1,70 @@
 # 🩸 BloodLinker
 
-![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white) ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white) ![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white) ![Status](https://img.shields.io/badge/Status-Hackathon_Ready-success?style=for-the-badge)
+![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white) ![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white) ![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)
 
 **BloodLinker** is a life-saving mobile application designed to bridge the gap between blood donors and patients in real-time. By removing middlemen and utilizing live data streams, it ensures critical requests are seen and acted upon instantly.
 
 ---
 
-## 🎨 Design Philosophy: "Vital Red & Medical White"
+## Table of Contents
 
-We moved away from standard Material Design to create a custom aesthetic focused on trust and urgency.
+- [Project Description](#project-description)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Technical Architecture](#technical-architecture)
+- [Tech Stack](#tech-stack)
+- [Installation & Setup](#installation--setup)
+- [Future Roadmap](#future-roadmap)
+- [Contributing](#contributing)
+- [Contact](#contact)
 
-- **Primary Color:** `#E63946` (Vital Red) - Chosen for urgency without being alarming.
-- **Background:** `#F8F9FA` (Clean Grey) - Reduces eye strain compared to pure white.
-- **Typography:** Google Fonts (`Poppins` / `Lato`) for modern readability.
-- **Components:** Custom curved headers and soft-shadow cards for a premium feel.
+---
 
-## 🏗️ Technical Architecture
+## Project Description
 
-The app operates on a **Write/Read Pipeline** architecture powered by Firebase:
+Blood donation delays can be fatal. **BloodLinker** solves this by creating a direct, real-time pipeline between those in need and those who can help.
+
+Unlike traditional directories, BloodLinker features a **Live Dashboard** that updates instantly using Cloud Firestore streams. It allows users to post urgent requests with location details and provides a "One-Tap Call" feature that bypasses the app sandbox to trigger the native phone dialer, ensuring immediate communication.
+
+## Features
+
+- **Secure Authentication:** Robust email/password login system with session persistence using Firebase Auth.
+- **Live Dashboard:** A real-time feed of blood requests that updates instantly on all devices without needing to refresh.
+- **Smart Formatting:** Intelligent data parsing that converts raw database values (e.g., `bPositive`) into human-readable tags (`B+`).
+- **One-Tap Contact:** Direct integration with the native Android/iOS dialer (`url_launcher`) to connect donors to patients immediately.
+- **Secure Navigation:** Advanced navigation logic that clears history stacks upon logout to prevent unauthorized back-navigation.
+
+## Screenshots
+
+|              **Live Dashboard**              |                **Request Form**                 |               **Direct Call**                |
+| :------------------------------------------: | :---------------------------------------------: | :------------------------------------------: |
+| <img src="screenshots/home.png" width="250"> | <img src="screenshots/request.png" width="250"> | <img src="screenshots/call.png" width="250"> |
+
+_(Note: These screenshots demonstrate the live data feed and the call-to-action interface.)_
+
+## Technical Architecture
+
+The app operates on a custom **Write/Read Pipeline** architecture:
 
 1.  **Write Pipeline:**
     - User submits a `BloodRequest` form (Patient Name, Bags, Location).
     - Data is validated and pushed to the `requests` collection in Cloud Firestore.
 2.  **Read Pipeline:**
-    - The Dashboard uses a `StreamBuilder` to maintain a live, persistent connection to the database.
-    - New requests appear instantly on all devices without pull-to-refresh.
+    - The Dashboard uses a `StreamBuilder` to maintain a persistent connection to the database.
+    - This ensures 0-latency updates when new requests come in.
 3.  **Action Pipeline:**
-    - The "Call to Donate" feature bypasses the app sandbox using `LaunchMode.externalApplication` to trigger the native Android/iOS dialer.
+    - The app uses `LaunchMode.externalApplication` to break out of the app sandbox and trigger the device's native phone functionality.
 
-## ✨ Key Features
+## Tech Stack
 
-- [x] **Secure Authentication:** Firebase Email/Password login with session persistence.
-- [x] **Live Dashboard:** Real-time feed of blood requests sorted by urgency (timestamp).
-- [x] **One-Tap Contact:** Direct dialer integration to connect donors to patients immediately.
-- [x] **Smart Formatting:** Auto-converts database enums (e.g., `bPositive`) to human-readable text (`B+`).
-- [x] **Secure Navigation:** Logic to clear navigation stacks upon logout to prevent unauthorized access.
+- **Framework:** [Flutter](https://flutter.dev/) (Dart)
+- **Backend:** [Firebase Authentication](https://firebase.google.com/products/auth) & [Cloud Firestore](https://firebase.google.com/products/firestore)
+- **State Management:** `provider`
+- **Utilities:** `url_launcher` (for intent handling), `intl` (for timestamp formatting)
 
-## 📱 Screenshots
+## Installation & Setup
 
-|                **Dashboard**                 |                **Request Form**                 |               **Direct Call**                |
-| :------------------------------------------: | :---------------------------------------------: | :------------------------------------------: |
-| <img src="screenshots/home.png" width="250"> | <img src="screenshots/request.png" width="250"> | <img src="screenshots/call.png" width="250"> |
-
-## ⚙️ Installation & Setup
-
-This project comes pre-configured with a demo Firebase environment for easy testing.
+This project is configured for immediate demonstration purposes.
 
 ### 1. Prerequisites
 
