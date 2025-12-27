@@ -217,7 +217,9 @@ class AuthManager extends ChangeNotifier {
       if (_user == null) throw Exception("User not logged in");
 
       final requestData = <String, dynamic>{
-        'requesterId': _user!.uid,
+        // --- FIXED: Now uses 'userId' to match the MyRequests query ---
+        'userId': _user!.uid,
+        // -----------------------------------------------------------
         'patientName': patientName,
         'bloodGroup': bloodGroup,
         'bagsNeeded': bagsNeeded,

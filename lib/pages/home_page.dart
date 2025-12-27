@@ -9,6 +9,7 @@ import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
 import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
+import 'package:blood_linker/pages/my_requests_page.dart'; // <--- ADDED IMPORT
 
 class HomePage extends StatelessWidget {
   static const route = '/home';
@@ -38,6 +39,19 @@ class HomePage extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          // --- NEW: My Requests Button ---
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MyRequestsPage()),
+              );
+            },
+            icon: const Icon(Icons.history), // Clock/History icon
+            tooltip: 'My Requests',
+          ),
+
+          // --- End New Button ---
           IconButton(
             onPressed: () => onPressedLogout(context),
             icon: const Icon(Icons.logout),
@@ -167,7 +181,7 @@ class HomePage extends StatelessWidget {
                     Text(
                       "Donate Blood, Save Lives.",
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                         fontSize: 12,
                       ),
                     ),
@@ -178,13 +192,13 @@ class HomePage extends StatelessWidget {
                           Icon(
                             Icons.calendar_today,
                             size: 12,
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withOpacity(0.8),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             "Last donation: ${_formatLastDonationDate(user!.lastDonationDate!)}",
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                               fontSize: 11,
                             ),
                           ),
@@ -197,13 +211,13 @@ class HomePage extends StatelessWidget {
                           Icon(
                             Icons.info_outline,
                             size: 12,
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withOpacity(0.8),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             "No donation recorded",
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                               fontSize: 11,
                             ),
                           ),
