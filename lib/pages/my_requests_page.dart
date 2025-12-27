@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:blood_linker/pages/request_blood_page.dart';
-import 'package:blood_linker/pages/request_details_page.dart'; // <--- Import Details Page
+import 'package:blood_linker/pages/request_details_page.dart';
 
 class MyRequestsPage extends StatelessWidget {
   const MyRequestsPage({super.key});
@@ -72,7 +72,6 @@ class MyRequestsPage extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias, // Important for ripple effect
       child: InkWell(
-        // --- 1. CLICKING THE CARD OPENS DETAILS ---
         onTap: () {
           Navigator.push(
             context,
@@ -82,7 +81,6 @@ class MyRequestsPage extends StatelessWidget {
             ),
           );
         },
-        // ------------------------------------------
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -110,10 +108,8 @@ class MyRequestsPage extends StatelessWidget {
                     ),
                   ),
 
-                  // --- 2. ACTION BUTTONS STAY SEPARATE ---
                   Row(
                     children: [
-                      // EDIT BUTTON
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         tooltip: 'Edit Request',
@@ -131,7 +127,6 @@ class MyRequestsPage extends StatelessWidget {
                         },
                       ),
 
-                      // DELETE BUTTON
                       IconButton(
                         icon: const Icon(
                           Icons.delete_outline,
@@ -142,7 +137,6 @@ class MyRequestsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // ---------------------------------------
                 ],
               ),
               const SizedBox(height: 10),
@@ -163,7 +157,6 @@ class MyRequestsPage extends StatelessWidget {
                 "Bags: ${data['bagsNeeded']}",
                 style: const TextStyle(color: Colors.grey),
               ),
-              // Optional: Add a visual cue that it's clickable
               const SizedBox(height: 8),
               Text(
                 "Tap to view details",

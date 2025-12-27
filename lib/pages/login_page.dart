@@ -84,7 +84,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -96,7 +95,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Password
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
@@ -109,7 +107,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Login Button
                     Consumer<AuthManager>(
                       builder: (context, authManager, child) {
                         return SizedBox(

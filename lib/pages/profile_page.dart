@@ -126,7 +126,6 @@ class _ProfilePageState extends State<ProfilePage> {
           key: _formKey,
           child: Column(
             children: [
-              // --- AVATAR ---
               Center(
                 child: Stack(
                   children: [
@@ -164,7 +163,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 30),
 
-              // --- NAME ---
               _buildField(
                 label: "Full Name",
                 icon: Icons.person,
@@ -173,7 +171,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(height: 16),
 
-              // --- PHONE ---
               _buildField(
                 label: "Phone Number",
                 icon: Icons.phone,
@@ -182,8 +179,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 inputType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
-
-              // --- ROW: AGE & BLOOD TYPE ---
               Row(
                 children: [
                   Expanded(
@@ -200,8 +195,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // --- LAST DONATION DATE PICKER ---
               InkWell(
                 onTap: _isEditing ? _selectDate : null,
                 child: Container(

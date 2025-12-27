@@ -8,7 +8,6 @@ import 'package:blood_linker/pages/map_location_page.dart';
 class RequestBloodPage extends StatefulWidget {
   static const route = '/request_blood';
 
-  // OPTIONAL: If these are provided, we are in "Edit Mode"
   final String? requestId;
   final Map<String, dynamic>? initialData;
 
@@ -21,14 +20,12 @@ class RequestBloodPage extends StatefulWidget {
 class _RequestBloodPageState extends State<RequestBloodPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
   late TextEditingController _patientNameController;
   late TextEditingController _ageController;
   late TextEditingController _bagsController;
   late TextEditingController _contactController;
   late TextEditingController _notesController;
 
-  // State Variables
   String? _selectedBloodGroup;
   String? _selectedGender;
   DateTime? _whenNeeded;
@@ -39,14 +36,12 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
   @override
   void initState() {
     super.initState();
-    // 1. Initialize Controllers
     _patientNameController = TextEditingController();
     _ageController = TextEditingController();
     _bagsController = TextEditingController();
     _contactController = TextEditingController();
     _notesController = TextEditingController();
 
-    // 2. CHECK FOR EDIT MODE: Pre-fill data if available
     if (widget.initialData != null) {
       final data = widget.initialData!;
 
@@ -60,7 +55,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
       _selectedGender = data['gender'];
       _isEmergency = data['isEmergency'] ?? false;
 
-      // Restore Location
       if (data['latitude'] != null && data['longitude'] != null) {
         _selectedLocation = {
           'latitude': data['latitude'],
@@ -69,21 +63,14 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
           'address': data['address'] ?? '',
         };
       } else {
-        // Fallback for legacy data
         _selectedLocation = {
           'hospitalName': data['hospitalLocation'],
           'address': '',
         };
       }
 
-      // Restore Date/Time (Firestore Timestamp -> DateTime)
       if (data['whenNeeded'] != null) {
-        // Check if it's a Firestore Timestamp or just a DateTime
-        // (Usually Firestore returns Timestamp, so we convert it)
         try {
-          // If using cloud_firestore package, data['whenNeeded'] is Timestamp
-          // If passed from local Map, might differ.
-          // We assume it behaves like a standard Firestore Timestamp or DateTime object.
           final dynamic rawDate = data['whenNeeded'];
           if (rawDate.runtimeType.toString().contains('Timestamp')) {
             _whenNeeded = rawDate.toDate();
@@ -157,9 +144,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
   Future<void> _submitRequest() async {
     if (_formKey.currentState!.validate()) {
-      // Basic location check
       if (_selectedLocation == null && widget.requestId == null) {
-        // Require location on Create. Relax on Edit if needed, but let's keep strict.
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a location on the map')),
         );
@@ -168,7 +153,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
       final authManager = Provider.of<AuthManager>(context, listen: false);
 
-      // Determine the string to show on card
       final String hospitalLocation;
       if (_selectedLocation != null) {
         hospitalLocation =
@@ -181,9 +165,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
       bool success;
 
-      // --- LOGIC BRANCH: EDIT vs CREATE ---
       if (widget.requestId != null) {
-        // UPDATE EXISTING
         success = await authManager.updateBloodRequest(
           requestId: widget.requestId!,
           patientName: _patientNameController.text.trim(),
@@ -204,7 +186,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
           address: _selectedLocation?['address'],
         );
       } else {
-        // CREATE NEW
         success = await authManager.createBloodRequest(
           patientName: _patientNameController.text.trim(),
           age: int.tryParse(_ageController.text.trim()),
@@ -273,7 +254,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 20),
 
-              // Patient Name
               TextFormField(
                 controller: _patientNameController,
                 decoration: _inputDecoration('Patient Name', Icons.person),
@@ -281,7 +261,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Age
               TextFormField(
                 controller: _ageController,
                 keyboardType: TextInputType.number,
@@ -297,7 +276,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Gender Dropdown
               DropdownButtonFormField<String>(
                 initialValue: _selectedGender,
                 decoration: _inputDecoration('Gender', Icons.person_outline),
@@ -313,7 +291,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Blood Group Dropdown
               DropdownButtonFormField<String>(
                 initialValue: _selectedBloodGroup, // Handles pre-fill
                 validator: (value) => (value == null || value.isEmpty)
@@ -333,7 +310,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Bags Needed
               TextFormField(
                 controller: _bagsController,
                 keyboardType: TextInputType.number,
@@ -349,7 +325,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // When Needed
               InkWell(
                 onTap: _selectWhenNeeded,
                 child: Container(
@@ -393,7 +368,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
                 ),
               const SizedBox(height: 15),
 
-              // Hospital/Location Selection
               InkWell(
                 onTap: _selectLocation,
                 child: Container(
@@ -446,7 +420,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Contact Number
               TextFormField(
                 controller: _contactController,
                 keyboardType: TextInputType.phone,
@@ -455,7 +428,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Additional Notes
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
@@ -477,7 +449,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 15),
 
-              // Emergency Checkbox
               InkWell(
                 onTap: () {
                   setState(() {
@@ -501,7 +472,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
               ),
               const SizedBox(height: 30),
 
-              // Submit Button
               ElevatedButton(
                 onPressed: _submitRequest,
                 style: ElevatedButton.styleFrom(
@@ -523,7 +493,6 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
     );
   }
 
-  // Helper to get location text
   String _getLocationDisplayString() {
     if (_selectedLocation == null) return 'Hospital / Location';
 
