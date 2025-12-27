@@ -17,17 +17,19 @@ class _WelcomePageState extends State<WelcomePage> {
   int _currentPage = 0;
 
   final List<Map<String, dynamic>> _onboardingData = [
-    {
-      "title": "Find Donors Nearby",
-      "text":
-          "Locate willing blood donors in your area instantly with our real-time map.",
-      "icon": Icons.location_on_rounded,
-    },
+    // Swapped: Request Blood is now first
     {
       "title": "Request Blood Fast",
       "text":
           "In an emergency, every second counts. Create a request and notify donors immediately.",
       "icon": Icons.emergency_share_rounded,
+    },
+    // Swapped: Find Donors is now second
+    {
+      "title": "Find Donors Nearby",
+      "text":
+          "Locate willing blood donors in your area instantly with our real-time map.",
+      "icon": Icons.location_on_rounded,
     },
     {
       "title": "Save Lives Forever",
