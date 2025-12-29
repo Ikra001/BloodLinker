@@ -1,22 +1,25 @@
-import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:blood_linker/core/exceptions/app_exceptions.dart';
+import 'package:blood_linker/services/auth_service.dart';
+import 'package:blood_linker/services/user_service.dart';
 import 'package:blood_linker/models/user.dart';
-import 'package:blood_linker/utils/logger.dart';
 
 class AuthManager extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthService _authService;
+  final UserService _userService;
+
   User? _user;
   CustomUser? _customUser;
   bool _isLoading = false;
   String? _errorMessage;
 
-  AuthManager() {
-    _auth.authStateChanges().listen((User? user) async {
+  AuthManager(this._authService, this._userService) {
+    _authService.authStateChanges().listen((User? user) {
       _user = user;
       if (user != null) {
-        await _loadUserData(user.uid);
+        _loadUserData();
       } else {
         _customUser = null;
       }
@@ -45,16 +48,10 @@ class AuthManager extends ChangeNotifier {
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
     _setLoading(true);
     try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      if (userCredential.user != null) {
-        await _loadUserData(userCredential.user!.uid);
-      }
+      await _authService.signIn(email, password);
       _setLoading(false);
       return true;
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       _setLoading(false, error: e.message);
       return false;
     } catch (e) {
@@ -72,28 +69,20 @@ class AuthManager extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final user = await _authService.register(email, password);
 
       final customUser = CustomUser(
-        userId: userCredential.user!.uid,
+        userId: user.uid,
         name: name ?? '',
         email: email,
         phone: phone ?? '',
         bloodType: bloodType,
       );
 
-      await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set(customUser.toFirestore());
-
-      _customUser = customUser;
+      await _userService.updateProfile(customUser);
       _setLoading(false);
       return true;
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       _setLoading(false, error: e.message);
       return false;
     } catch (e) {
@@ -102,29 +91,23 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadUserData(String userId) async {
+  Future<void> _loadUserData() async {
+    if (_user == null) return;
+
     try {
-      final doc = await _firestore.collection('users').doc(userId).get();
-      if (doc.exists) {
-        _customUser = CustomUser.fromFirestore(doc);
-      }
+      _customUser = await _userService.getCurrentUser();
     } catch (e) {
-      AppLogger.error('Error loading user data', e);
+      // Don't set error for silent data loading
+      debugPrint('Error loading user data: $e');
     }
+    notifyListeners();
   }
 
   Future<bool> updateLastDonationDate(DateTime? date) async {
     _setLoading(true);
     try {
-      if (_user == null) throw Exception("User not logged in");
-      final updateData = <String, dynamic>{};
-      if (date != null) {
-        updateData['lastDonationDate'] = Timestamp.fromDate(date);
-      } else {
-        updateData['lastDonationDate'] = null;
-      }
-      await _firestore.collection('users').doc(_user!.uid).update(updateData);
-      await _loadUserData(_user!.uid);
+      await _userService.updateLastDonationDate(date);
+      await _loadUserData(); // Reload to get updated data
       _setLoading(false);
       return true;
     } catch (e) {
@@ -133,173 +116,6 @@ class AuthManager extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
-    _setLoading(true);
-    try {
-      await _auth.signOut();
-      _setLoading(false);
-    } catch (e) {
-      _setLoading(false, error: 'Failed to logout: $e');
-    }
-  }
-
-  // --- CREATE FUNCTION ---
-  Future<bool> createBloodRequest({
-    required String patientName,
-    required String bloodGroup,
-    required int bagsNeeded,
-    required String contactNumber,
-    required String hospitalLocation,
-    int? age,
-    String? gender,
-    DateTime? whenNeeded,
-    bool isEmergency = false,
-    String? additionalNotes,
-    double? latitude,
-    double? longitude,
-    String? hospitalName,
-    String? address,
-  }) async {
-    _setLoading(true);
-    try {
-      if (_user == null) throw Exception("User not logged in");
-
-      final requestData = <String, dynamic>{
-        'userId': _user!.uid,
-        'patientName': patientName,
-        'bloodGroup': bloodGroup,
-        'bagsNeeded': bagsNeeded,
-        'contactNumber': contactNumber,
-        'hospitalLocation': hospitalLocation,
-        'requestDate': FieldValue.serverTimestamp(),
-        'status': 'pending',
-        'age': age,
-        'gender': gender,
-        'isEmergency': isEmergency,
-        'additionalNotes': additionalNotes,
-      };
-
-      if (whenNeeded != null) {
-        requestData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
-      }
-
-      if (latitude != null && longitude != null) {
-        requestData['latitude'] = latitude;
-        requestData['longitude'] = longitude;
-      }
-      if (hospitalName != null && hospitalName.isNotEmpty) {
-        requestData['hospitalName'] = hospitalName;
-      }
-      if (address != null && address.isNotEmpty) {
-        requestData['address'] = address;
-      }
-
-      await _firestore.collection('requests').add(requestData);
-
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setLoading(false, error: 'Failed to create request: $e');
-      return false;
-    }
-  }
-
-  // --- UPDATE REQUEST FUNCTION ---
-  Future<bool> updateBloodRequest({
-    required String requestId,
-    required String patientName,
-    required String bloodGroup,
-    required int bagsNeeded,
-    required String contactNumber,
-    required String hospitalLocation,
-    int? age,
-    String? gender,
-    DateTime? whenNeeded,
-    bool isEmergency = false,
-    String? additionalNotes,
-    double? latitude,
-    double? longitude,
-    String? hospitalName,
-    String? address,
-  }) async {
-    _setLoading(true);
-    try {
-      // Fetch current document to preserve existing values if new values are null
-      final currentDoc = await _firestore
-          .collection('requests')
-          .doc(requestId)
-          .get();
-      final currentData = currentDoc.data() ?? {};
-
-      // Build update data - always include required fields
-      final updateData = <String, dynamic>{
-        'patientName': patientName,
-        'bloodGroup': bloodGroup,
-        'bagsNeeded': bagsNeeded,
-        'contactNumber': contactNumber,
-        'hospitalLocation': hospitalLocation,
-        'isEmergency': isEmergency,
-      };
-
-      // Include age - use provided value or preserve existing
-      if (age != null) {
-        updateData['age'] = age;
-      } else if (currentData.containsKey('age')) {
-        // Preserve existing age if not provided
-        updateData['age'] = currentData['age'];
-      }
-
-      // Include gender - use provided value or preserve existing
-      if (gender != null && gender.isNotEmpty) {
-        updateData['gender'] = gender;
-      } else if (currentData.containsKey('gender')) {
-        // Preserve existing gender if not provided
-        updateData['gender'] = currentData['gender'];
-      }
-
-      // Always include additionalNotes - update it even if empty (user may have cleared it)
-      updateData['additionalNotes'] =
-          (additionalNotes != null && additionalNotes.isNotEmpty)
-          ? additionalNotes
-          : null;
-
-      // Handle whenNeeded - use provided value or preserve existing
-      if (whenNeeded != null) {
-        updateData['whenNeeded'] = Timestamp.fromDate(whenNeeded);
-      } else if (currentData.containsKey('whenNeeded')) {
-        // Preserve existing whenNeeded if not provided
-        updateData['whenNeeded'] = currentData['whenNeeded'];
-      }
-
-      // Location fields - only update if provided
-      if (latitude != null && longitude != null) {
-        updateData['latitude'] = latitude;
-        updateData['longitude'] = longitude;
-      }
-      if (hospitalName != null && hospitalName.isNotEmpty) {
-        updateData['hospitalName'] = hospitalName;
-      } else if (hospitalName != null && hospitalName.isEmpty) {
-        // If explicitly set to empty, remove it
-        updateData['hospitalName'] = null;
-      }
-      if (address != null && address.isNotEmpty) {
-        updateData['address'] = address;
-      } else if (address != null && address.isEmpty) {
-        // If explicitly set to empty, remove it
-        updateData['address'] = null;
-      }
-
-      await _firestore.collection('requests').doc(requestId).update(updateData);
-
-      _setLoading(false);
-      return true;
-    } catch (e) {
-      _setLoading(false, error: 'Failed to update request: $e');
-      return false;
-    }
-  }
-
-  // --- UPDATED PROFILE FUNCTION (With Age & Date) ---
   Future<bool> updateUserProfile({
     required String name,
     required String phone,
@@ -309,38 +125,33 @@ class AuthManager extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      if (_user == null) throw Exception("User not logged in");
+      if (_customUser == null) throw Exception("User not loaded");
 
-      final updateData = <String, dynamic>{
-        'name': name,
-        'phone': phone,
-        'bloodType': bloodType,
-        'age': age,
-        'lastDonationDate': lastDonationDate != null
-            ? Timestamp.fromDate(lastDonationDate)
-            : null,
-      };
+      final updatedUser = _customUser!.copyWith(
+        name: name,
+        phone: phone,
+        bloodType: bloodType,
+        age: age,
+        lastDonationDate: lastDonationDate,
+      );
 
-      await _firestore.collection('users').doc(_user!.uid).update(updateData);
-
-      // Reload data to ensure app state is in sync
-      await _loadUserData(_user!.uid);
-
+      await _userService.updateProfile(updatedUser);
+      await _loadUserData(); // Reload to get updated data
       _setLoading(false);
       return true;
     } catch (e) {
-      _setLoading(false, error: 'Failed to update profile: ${e.toString()}');
+      _setLoading(false, error: 'Failed to update profile: $e');
       return false;
     }
   }
-  bool isInitialized = false;
 
-  Future<void> loadCurrentUser() async {
-    if (isInitialized) return;
-
-    // load firestore user here
-    isInitialized = true;
-    notifyListeners();
+  Future<void> logout() async {
+    _setLoading(true);
+    try {
+      await _authService.logout();
+      _setLoading(false);
+    } catch (e) {
+      _setLoading(false, error: 'Failed to logout: $e');
+    }
   }
-
 }

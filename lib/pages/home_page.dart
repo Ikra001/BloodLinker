@@ -11,6 +11,10 @@ import 'package:blood_linker/pages/welcome_page.dart';
 import 'package:blood_linker/utils/logger.dart';
 import 'package:blood_linker/pages/my_requests_page.dart';
 import 'package:blood_linker/pages/profile_page.dart';
+import 'package:blood_linker/pages/health_tips_page.dart';
+import 'package:blood_linker/pages/appointment_page.dart';
+import 'package:blood_linker/pages/certificates_page.dart';
+import 'package:blood_linker/pages/health_dashboard_page.dart';
 
 class HomePage extends StatefulWidget {
   static const route = '/home';
@@ -257,6 +261,27 @@ class _HomePageState extends State<HomePage> {
               ),
               Row(
                 children: [
+                  _buildHeaderIcon(
+                    Icons.dashboard,
+                    () =>
+                        Navigator.pushNamed(context, HealthDashboardPage.route),
+                  ),
+                  const SizedBox(width: 15),
+                  _buildHeaderIcon(
+                    Icons.lightbulb_outline,
+                    () => Navigator.pushNamed(context, HealthTipsPage.route),
+                  ),
+                  const SizedBox(width: 15),
+                  _buildHeaderIcon(
+                    Icons.calendar_today_rounded,
+                    () => Navigator.pushNamed(context, AppointmentPage.route),
+                  ),
+                  const SizedBox(width: 15),
+                  _buildHeaderIcon(
+                    Icons.verified,
+                    () => Navigator.pushNamed(context, CertificatesPage.route),
+                  ),
+                  const SizedBox(width: 15),
                   _buildHeaderIcon(
                     Icons.history_rounded,
                     () => Navigator.push(

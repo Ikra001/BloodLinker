@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:blood_linker/auth/auth_manager.dart';
+import 'package:blood_linker/auth/blood_request_manager.dart';
 import 'package:blood_linker/constants.dart';
 import 'package:blood_linker/pages/map_location_page.dart';
 
@@ -181,10 +182,15 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
 
       bool success;
 
+      final requestManager = Provider.of<BloodRequestManager>(
+        context,
+        listen: false,
+      );
+
       // --- LOGIC BRANCH: EDIT vs CREATE ---
       if (widget.requestId != null) {
         // UPDATE EXISTING
-        success = await authManager.updateBloodRequest(
+        success = await requestManager.updateBloodRequest(
           requestId: widget.requestId!,
           patientName: _patientNameController.text.trim(),
           bloodGroup: _selectedBloodGroup!,
@@ -205,7 +211,7 @@ class _RequestBloodPageState extends State<RequestBloodPage> {
         );
       } else {
         // CREATE NEW
-        success = await authManager.createBloodRequest(
+        success = await requestManager.createBloodRequest(
           patientName: _patientNameController.text.trim(),
           age: int.tryParse(_ageController.text.trim()),
           gender: _selectedGender,
